@@ -3,6 +3,7 @@ from requests.adapters import HTTPAdapter, Retry
 from bs4 import BeautifulSoup
 import re
 import time
+from collections import defaultdict
 from apify import Actor
 
 # Configura uma sessão com retries
@@ -47,6 +48,7 @@ def main():
     print(f"{len(base_urls)} URLs recebidas como entrada via Apify.")
 
     emails_by_company = {}
+    total_emails = 0
 
     for base_url in base_urls:
         try:
@@ -77,12 +79,31 @@ def main():
                 emails_by_company[link] = emails
             time.sleep(1)
 
+    results_by_range = defaultdict(int)
+
     for company_url, emails in emails_by_company.items():
         for email in emails:
             Actor.push_data({
                 "url": company_url,
                 "email": email
             })
+            total_emails += 1
+
+    if total_emails <= 50:
+        results_by_range["0–50"] += 1
+    elif total_emails <= 100:
+        results_by_range["51–100"] += 1
+    elif total_emails <= 200:
+        results_by_range["101–200"] += 1
+    else:
+        results_by_range["200+"] += 1
+
+    Actor.push_data({
+        "summary": {
+            "total_emails": total_emails,
+            "range": list(results_by_range.keys())[0]
+        }
+    })
 
     Actor.exit()
     print("\nEmails extraídos foram enviados para o dataset do Apify.")
