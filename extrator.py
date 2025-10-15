@@ -3,7 +3,7 @@ from requests.adapters import HTTPAdapter, Retry
 from bs4 import BeautifulSoup
 import re
 import time
-import os
+from apify import Actor
 
 # Configura uma sessão com retries
 session = requests.Session()
@@ -70,23 +70,18 @@ def main():
                 emails_by_company[link] = emails
             time.sleep(1)
 
-    # Salvando os resultados em um arquivo de texto
-    with open("emails_extraidos.txt", "a", encoding="utf-8") as f:
-        if f.tell() == 0:
-            f.write("Emails encontrados:\n")
+    from apify import Actor
 
-        existing_emails = set()
-        if os.path.exists("emails_extraidos.txt"):
-            with open("emails_extraidos.txt", "r", encoding="utf-8") as old_file:
-                for line in old_file:
-                    found = re.findall(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", line)
-                    existing_emails.update(found)
+    Actor.init()
 
-        for company_url, emails in emails_by_company.items():
-            unique_emails = [email for email in emails if email not in existing_emails]
-            if unique_emails:
-                f.write(f"{company_url} -> {', '.join(unique_emails)}\n")
-                existing_emails.update(unique_emails)
+    for company_url, emails in emails_by_company.items():
+        for email in emails:
+            Actor.push_data({
+                "url": company_url,
+                "email": email
+            })
+
+    Actor.exit()
 
     print("\nEmails extraídos foram salvos em 'emails_extraidos.txt'.")
 

@@ -1,0 +1,14 @@
+{
+  "title": "Input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "urls": {
+      "title": "Lista de URLs",
+      "type": "string",
+      "description": "Cole aqui as URLs separadas por vírgula (ex: https://site1.com, https://site2.com)",
+      "editor": "textarea"
+    }
+  },
+  "required": ["urls"]
+}
