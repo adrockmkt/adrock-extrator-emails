@@ -35,9 +35,16 @@ def extract_emails_from_url(url):
     return emails
 
 def main():
-    with open("urls.txt", "r", encoding="utf-8") as file:
-        base_urls = [line.strip() for line in file if line.strip()]
-    print(f"{len(base_urls)} URLs carregadas de 'urls.txt'")
+    Actor.init()
+    input_data = Actor.get_input()
+
+    if not input_data or 'urls' not in input_data:
+        print("Erro: Nenhuma entrada 'urls' fornecida.")
+        Actor.exit()
+        return
+
+    base_urls = input_data['urls']
+    print(f"{len(base_urls)} URLs recebidas como entrada via Apify.")
 
     emails_by_company = {}
 
@@ -70,10 +77,6 @@ def main():
                 emails_by_company[link] = emails
             time.sleep(1)
 
-    from apify import Actor
-
-    Actor.init()
-
     for company_url, emails in emails_by_company.items():
         for email in emails:
             Actor.push_data({
@@ -82,8 +85,4 @@ def main():
             })
 
     Actor.exit()
-
-    print("\nEmails extraídos foram salvos em 'emails_extraidos.txt'.")
-
-if __name__ == "__main__":
-    main()
+    print("\nEmails extraídos foram enviados para o dataset do Apify.")
