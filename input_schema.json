@@ -1,13 +1,18 @@
 {
-  "title": "Input",
+  "title": "Ad Rock Extrator de Emails",
+  "description": "Extraia e-mails automaticamente de sites e páginas associadas. Insira uma ou mais URLs e o sistema identificará e-mails válidos em links internos.",
   "type": "object",
   "schemaVersion": 1,
   "properties": {
     "urls": {
       "title": "Lista de URLs",
-      "type": "string",
-      "description": "Cole aqui as URLs separadas por vírgula (ex: https://site1.com, https://site2.com)",
-      "editor": "textarea"
+      "type": "array",
+      "description": "Insira uma ou mais URLs a partir das quais deseja extrair os e-mails.",
+      "editor": "textarea",
+      "prefill": ["https://exemplo.com"],
+      "items": {
+        "type": "string"
+      }
     }
   },
   "required": ["urls"]
