@@ -9,7 +9,7 @@ This project automates the extraction of public email addresses from websites us
 1. The user enters one or more URLs in the Apify interface.
 2. The Actor visits each provided website and crawls internal links.
 3. All valid email addresses found are automatically saved to the run's Dataset.
-4. The emails are saved to the Apify Dataset and grouped into ranges (0–50, 51–100, 101–200, etc.).
+4. The emails are grouped by volume (e.g., 0–50, 51–100, 101–200...) and stored in the Apify Dataset.
 
 ## 📁 Project Structure
 
@@ -18,6 +18,7 @@ extrator_de_emails/
 ├── extrator.py              # Main extraction script (used on Apify)
 ├── input_schema.json        # Defines the visual interface for Apify input
 ├── apify.json               # Actor configuration for Apify
+├── output_schema.json       # Defines how the results are displayed on Apify
 ├── requirements.txt         # Python dependencies
 ├── Dockerfile               # Container for running on Apify
 ```
@@ -54,7 +55,7 @@ Este projeto automatiza a extração de e-mails públicos a partir de sites cole
 1. O usuário insere uma ou mais URLs diretamente na interface do Apify.
 2. O Actor acessa cada site informado e percorre seus links internos.
 3. Todos os e-mails válidos encontrados são salvos automaticamente no Dataset da execução.
-4. Os e-mails são organizados em faixas de quantidade (0–50, 51–100, 101–200 etc.) dentro do Dataset do Apify.
+4. Os e-mails são agrupados por volume (ex: 0–50, 51–100, 101–200...) e armazenados no Dataset do Apify.
 
 ---
 
@@ -65,6 +66,7 @@ extrator_de_emails/
 ├── extrator.py              # Script principal de extração (usado no Apify)
 ├── input_schema.json        # Define a interface visual para entrada via Apify
 ├── apify.json               # Configuração do Actor no Apify
+├── output_schema.json       # Define como os resultados são exibidos no Apify
 ├── requirements.txt         # Dependências Python
 ├── Dockerfile               # Containerização para execução no Apify
 ```

@@ -1,0 +1,24 @@
+
+
+{
+  "title": "Extracted Emails Output Schema",
+  "type": "object",
+  "properties": {
+    "email": {
+      "type": "string",
+      "title": "Email Address",
+      "description": "The extracted email address found on the page."
+    },
+    "url": {
+      "type": "string",
+      "title": "Source URL",
+      "description": "The URL where the email address was found."
+    },
+    "group": {
+      "type": "string",
+      "title": "Group",
+      "description": "The group of the result based on email count (e.g., 0-50, 51-100)."
+    }
+  },
+  "required": ["email", "url"]
+}
