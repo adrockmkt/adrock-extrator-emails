@@ -1,3 +1,52 @@
+
+# 📨 Ad Rock Email Extractor via Apify
+
+## 🧾 Description (EN)
+
+This project automates the extraction of public email addresses from websites using the [Apify](https://apify.com/) platform and a Python script. Ideal for outreach, lead generation, and data collection.
+
+## ⚙️ How It Works
+
+1. The user enters one or more URLs in the Apify interface.
+2. The Actor visits each provided website and crawls internal links.
+3. All valid email addresses found are automatically saved to the run's Dataset.
+
+## 📁 Project Structure
+
+```
+extrator_de_emails/
+├── extrator.py              # Main extraction script (used on Apify)
+├── input_schema.json        # Defines the visual interface for Apify input
+├── apify.json               # Actor configuration for Apify
+├── requirements.txt         # Python dependencies
+├── Dockerfile               # Container for running on Apify
+├── ray-so-export.png        # Project illustration image
+├── LICENSE                  # License file
+├── CONTRIBUTING.md          # Contribution guide
+└── README.md                # This file
+```
+
+## 🚀 Running on Apify
+
+1. Go to [Apify Console](https://console.apify.com/).
+2. Create or clone the Actor with the code from this repository.
+3. Paste one or more URLs into the "List of URLs" field.
+4. Click "Start" and the system will extract valid emails.
+5. Access the results in "Dataset" > "default" and export to CSV, JSON, etc.
+
+## 🧠 Notes
+
+- The system avoids duplicate email addresses.
+- Sites that block bots or require authentication may return no results.
+- Apify Dataset keeps the full history of previous runs.
+
+## ✉️ Contact
+
+Developed by Rafael Marques Lins — Ad Rock Digital Mkt  
+📧 rafael@adrock.com.br  
+📲 WhatsApp: [Chat on WhatsApp](https://wa.me/5541991255859)  
+🌐 https://adrock.com.br
+
 # 📨 Ad Rock Extrator de E-mails via Apify
 
 Este projeto automatiza a extração de e-mails públicos a partir de sites coletados previamente via Google Maps, utilizando a plataforma [Apify](https://apify.com/) e um script em Python. Ideal para curadoria de contatos institucionais, prospecção ou base de dados.
