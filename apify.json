@@ -1,0 +1,10 @@
+{
+  "name": "adrock-extrator-emails",
+  "description": "Extrai e-mails automaticamente de qualquer site informado, salvando os dados em um arquivo .txt e .csv com deduplicação. Ideal para ONGs, OSCs, fundações, empresas ou associações.",
+  "version": "0.0",
+  "dockerfile": "Dockerfile",
+  "main": "extrator.py",
+  "env": {
+    "PYTHONUNBUFFERED": "1"
+  }
+}
