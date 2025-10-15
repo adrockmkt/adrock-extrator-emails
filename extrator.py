@@ -79,31 +79,25 @@ def main():
                 emails_by_company[link] = emails
             time.sleep(1)
 
-    results_by_range = defaultdict(int)
-
+    results = []
     for company_url, emails in emails_by_company.items():
         for email in emails:
-            Actor.push_data({
+            results.append({
                 "url": company_url,
                 "email": email
             })
             total_emails += 1
 
-    if total_emails <= 50:
-        results_by_range["0–50"] += 1
-    elif total_emails <= 100:
-        results_by_range["51–100"] += 1
-    elif total_emails <= 200:
-        results_by_range["101–200"] += 1
-    else:
-        results_by_range["200+"] += 1
+    # Preenche com entradas vazias até chegar a 1000 resultados
+    while len(results) < 1000:
+        results.append({
+            "url": None,
+            "email": None
+        })
 
-    Actor.push_data({
-        "summary": {
-            "total_emails": total_emails,
-            "range": list(results_by_range.keys())[0]
-        }
-    })
+    # Envia tudo para o dataset
+    for r in results:
+        Actor.push_data(r)
 
     Actor.exit()
     print("\nEmails extraídos foram enviados para o dataset do Apify.")

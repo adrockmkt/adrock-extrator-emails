@@ -9,7 +9,7 @@ This project automates the extraction of public email addresses from websites us
 1. The user enters one or more URLs in the Apify interface.
 2. The Actor visits each provided website and crawls internal links.
 3. All valid email addresses found are automatically saved to the run's Dataset.
-4. The emails are grouped by volume (e.g., 0–50, 51–100, 101–200...) and stored in the Apify Dataset.
+4. The emails are grouped into a fixed list of 1,000 results (e.g., filled with nulls if fewer than 1,000) and stored in the Apify Dataset.
 
 ## 📁 Project Structure
 
@@ -55,7 +55,7 @@ Este projeto automatiza a extração de e-mails públicos a partir de sites cole
 1. O usuário insere uma ou mais URLs diretamente na interface do Apify.
 2. O Actor acessa cada site informado e percorre seus links internos.
 3. Todos os e-mails válidos encontrados são salvos automaticamente no Dataset da execução.
-4. Os e-mails são agrupados por volume (ex: 0–50, 51–100, 101–200...) e armazenados no Dataset do Apify.
+4. Os e-mails são organizados em uma lista fixa de 1.000 resultados (preenchidos com `null` se houver menos) e armazenados no Dataset do Apify.
 
 ---
 
