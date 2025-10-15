@@ -8,6 +8,7 @@
       "title": "Lista de URLs",
       "type": "array",
       "description": "Insira uma ou mais URLs a partir das quais deseja extrair os e-mails.",
+      "editor": "stringList",
       "prefill": ["https://exemplo.com"],
       "items": {
         "type": "string"
