@@ -1,4 +1,3 @@
-
 # 📨 Ad Rock Email Extractor via Apify
 
 ## 🧾 Description (EN)
@@ -21,10 +20,6 @@ extrator_de_emails/
 ├── apify.json               # Actor configuration for Apify
 ├── requirements.txt         # Python dependencies
 ├── Dockerfile               # Container for running on Apify
-├── ray-so-export.png        # Project illustration image
-├── LICENSE                  # License file
-├── CONTRIBUTING.md          # Contribution guide
-└── README.md                # This file
 ```
 
 ## 🚀 Running on Apify
@@ -72,10 +67,6 @@ extrator_de_emails/
 ├── apify.json               # Configuração do Actor no Apify
 ├── requirements.txt         # Dependências Python
 ├── Dockerfile               # Containerização para execução no Apify
-├── ray-so-export.png        # Imagem ilustrativa do projeto
-├── LICENSE                  # Licença de uso
-├── CONTRIBUTING.md          # Guia de contribuição
-└── README.md                # Este arquivo
 ```
 
 ---
