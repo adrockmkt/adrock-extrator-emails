@@ -1,3 +1,24 @@
-emails_extraidos.txt
+# Python
 __pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Virtual environments
+.venv/
+venv/
+
+# Apify local storage (never commit)
+apify_storage/
+
+# Logs and temp files
 *.log
+*.tmp
+
+# OS / IDE
+.DS_Store
+.vscode/
+.idea/
+
+# Local artifacts
+emails_extraidos.txt

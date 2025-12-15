@@ -5,7 +5,6 @@ import re
 import time
 from collections import defaultdict
 from apify import Actor
-from math import ceil
 
 # Configura uma sessão com retries
 session = requests.Session()
@@ -109,3 +108,6 @@ def main():
 
     Actor.exit()
     print("\nEmails extraídos foram enviados para o dataset do Apify.")
+
+if __name__ == "__main__":
+    main()
