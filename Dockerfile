@@ -1,10 +1,14 @@
 FROM apify/actor-python:latest
 
-# Copia todos os arquivos da pasta local para o container
+# Use a consistent working directory inside the container
+WORKDIR /usr/src/app
+
+# Install Python dependencies first (better Docker layer caching)
+COPY requirements.txt ./
+RUN python -m pip install --no-cache-dir -r requirements.txt
+
+# Copy the rest of the source code
 COPY . ./
 
-# Instala as dependências
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Comando que será executado ao rodar o Actor
-CMD ["python", "extrator.py"]
+# Run the Actor (unbuffered logs for Apify)
+CMD ["python", "-u", "extrator.py"]
