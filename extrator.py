@@ -41,10 +41,62 @@ async def main() -> None:
     async with Actor:
         input_data = await Actor.get_input() or {}
 
-        base_urls = input_data.get('urls')
-        if not base_urls or not isinstance(base_urls, list):
-            Actor.log.error("Erro: campo obrigatório 'urls' não informado (lista de URLs).")
-            # Actor.fail() in this SDK version does not accept a message argument
+        # Debug: ajuda a entender como o Apify está entregando o INPUT
+        try:
+            Actor.log.info(f"INPUT keys recebidas: {list(input_data.keys())}")
+        except Exception:
+            pass
+
+        def _coerce_urls(value):
+            """Converte possíveis formatos de entrada em uma lista de strings URLs."""
+            if value is None:
+                return []
+
+            # Caso 1: lista de strings
+            if isinstance(value, list):
+                urls = []
+                for item in value:
+                    if isinstance(item, str):
+                        urls.append(item)
+                    # Caso 2: lista de objetos no formato startUrls do Apify
+                    elif isinstance(item, dict) and isinstance(item.get('url'), str):
+                        urls.append(item['url'])
+                return urls
+
+            # Caso 3: string única (permitir)
+            if isinstance(value, str):
+                return [value]
+
+            # Caso 4: objeto com chave 'url'
+            if isinstance(value, dict) and isinstance(value.get('url'), str):
+                return [value['url']]
+
+            return []
+
+        # Aceita múltiplas chaves (para evitar mismatch entre schema e código)
+        candidate_keys = [
+            'urls',
+            'url',
+            'startUrls',
+            'start_urls',
+            'listaDeUrls',
+            'lista_de_urls',
+            'listaDeURLs',
+            'lista_de_URLs',
+        ]
+
+        base_urls = []
+        for k in candidate_keys:
+            if k in input_data:
+                base_urls = _coerce_urls(input_data.get(k))
+                if base_urls:
+                    break
+
+        if not base_urls:
+            Actor.log.error(
+                "Erro: campo obrigatório de URLs não informado. "
+                "Preencha a lista de URLs no input (ex.: {'urls': ['https://exemplo.com/']})."
+            )
             await Actor.exit(exit_code=1)
             return
 
@@ -53,11 +105,11 @@ async def main() -> None:
         base_urls = list(dict.fromkeys(base_urls))
 
         if not base_urls:
-            Actor.log.error("Erro: campo 'urls' está vazio após normalização.")
+            Actor.log.error("Erro: lista de URLs está vazia após normalização.")
             await Actor.exit(exit_code=1)
             return
 
-        print(f"{len(base_urls)} URLs recebidas como entrada via Apify.")
+        Actor.log.info(f"{len(base_urls)} URL(s) recebida(s) como entrada via Apify.")
 
         emails_by_company = {}
         total_emails = 0
