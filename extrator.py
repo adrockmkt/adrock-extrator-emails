@@ -3,12 +3,25 @@ import requests
 from requests.adapters import HTTPAdapter, Retry
 from bs4 import BeautifulSoup
 import re
-import time
-from collections import defaultdict
 from apify import Actor
 from urllib.parse import urljoin, urlparse
 
 EMAIL_REGEX = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
+
+# Reusable HTTP session with retries (works both locally and on Apify)
+session = requests.Session()
+_retries = Retry(
+    total=3,
+    connect=3,
+    read=3,
+    status=3,
+    backoff_factor=0.5,
+    status_forcelist=(429, 500, 502, 503, 504),
+    allowed_methods=("HEAD", "GET", "OPTIONS"),
+)
+_adapter = HTTPAdapter(max_retries=_retries)
+session.mount("http://", _adapter)
+session.mount("https://", _adapter)
 
 def extract_emails_from_url(url: str) -> set:
     """Baixa uma URL e extrai e-mails do texto renderizado (sem JS)."""
@@ -22,7 +35,10 @@ def extract_emails_from_url(url: str) -> set:
         response = session.get(url, headers=headers, timeout=15, allow_redirects=True)
         status = getattr(response, "status_code", None)
         if status != 200:
-            Actor.log.warning(f"Erro ao acessar {url}: Status {status}")
+            try:
+                Actor.log.warning(f"Erro ao acessar {url}: Status {status}")
+            except Exception:
+                print(f"Erro ao acessar {url}: Status {status}")
             return emails
 
         soup = BeautifulSoup(response.text, "html.parser")
@@ -70,9 +86,10 @@ async def main() -> None:
                         urls.append(item['url'])
                 return urls
 
-            # Caso 3: string única (permitir)
+            # Caso 3: string (textarea no Apify): pode vir com 1 URL por linha
             if isinstance(value, str):
-                return [value]
+                lines = [ln.strip() for ln in value.splitlines()]
+                return [ln for ln in lines if ln]
 
             # Caso 4: objeto com chave 'url'
             if isinstance(value, dict) and isinstance(value.get('url'), str):
@@ -148,6 +165,10 @@ async def main() -> None:
         total_emails = 0
 
         for base_url in base_urls:
+            if not base_url.lower().startswith(("http://", "https://")):
+                Actor.log.warning(f"URL ignorada (sem http/https): {base_url}")
+                continue
+
             # Sempre tenta extrair e-mails da URL base também
             base_emails = extract_emails_from_url(base_url)
             if base_emails:
@@ -195,7 +216,7 @@ async def main() -> None:
                     if link not in emails_by_company:
                         emails_by_company[link] = set()
                     emails_by_company[link].update(emails)
-                time.sleep(0.5)
+                await asyncio.sleep(0.5)
 
         def get_group_by_index(index: int, step: int = 50) -> str:
             start = (index // step) * step + 1
