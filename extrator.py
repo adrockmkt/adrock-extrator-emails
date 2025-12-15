@@ -6,34 +6,41 @@ import re
 import time
 from collections import defaultdict
 from apify import Actor
+from urllib.parse import urljoin, urlparse
 
-# Configura uma sessão com retries
-session = requests.Session()
-retries = Retry(
-    total=3,                # Tenta até 3 vezes
-    backoff_factor=1,       # Aguarda 1 segundo entre as tentativas (pode ser incrementado exponencialmente)
-    status_forcelist=[502, 503, 504],  # Tenta novamente em certos status HTTP
-    allowed_methods=["GET"] # Métodos que receberão retry
-)
-adapter = HTTPAdapter(max_retries=retries)
-session.mount("http://", adapter)
-session.mount("https://", adapter)
+EMAIL_REGEX = re.compile(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+")
 
-def extract_emails_from_url(url):
+def extract_emails_from_url(url: str) -> set:
+    """Baixa uma URL e extrai e-mails do texto renderizado (sem JS)."""
     emails = set()
     try:
-        headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"}
-        # Use a sessão com retry configurado
-        response = session.get(url, headers=headers, timeout=10)
-        if response.status_code == 200:
-            soup = BeautifulSoup(response.text, 'html.parser')
-            text = soup.get_text()
-            found_emails = re.findall(r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+", text)
-            emails.update(found_emails)
-        else:
-            print(f"Erro ao acessar {url}: Status {response.status_code}")
+        headers = {
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+        }
+        response = session.get(url, headers=headers, timeout=15, allow_redirects=True)
+        status = getattr(response, "status_code", None)
+        if status != 200:
+            Actor.log.warning(f"Erro ao acessar {url}: Status {status}")
+            return emails
+
+        soup = BeautifulSoup(response.text, "html.parser")
+
+        # Remove scripts/styles para reduzir ruído
+        for tag in soup(["script", "style", "noscript"]):
+            tag.decompose()
+
+        text = soup.get_text(" ", strip=True)
+        found_emails = EMAIL_REGEX.findall(text)
+        emails.update(found_emails)
+
     except Exception as e:
-        print(f"Exceção ao processar {url}: {e}")
+        try:
+            Actor.log.warning(f"Exceção ao processar {url}: {e}")
+        except Exception:
+            print(f"Exceção ao processar {url}: {e}")
+
     return emails
 
 async def main() -> None:
@@ -111,39 +118,84 @@ async def main() -> None:
 
         Actor.log.info(f"{len(base_urls)} URL(s) recebida(s) como entrada via Apify.")
 
+        def _normalize_link(base: str, href: str) -> str | None:
+            if not href:
+                return None
+            href = href.strip()
+            if href.startswith("mailto:") or href.startswith("tel:"):
+                return None
+            if href.startswith("#"):
+                return None
+            abs_url = urljoin(base, href)
+            # Remove fragment
+            parsed = urlparse(abs_url)
+            if not parsed.scheme.startswith("http"):
+                return None
+            return parsed._replace(fragment="").geturl()
+
+        def _same_site(u1: str, u2: str) -> bool:
+            try:
+                h1 = urlparse(u1).netloc.lower()
+                h2 = urlparse(u2).netloc.lower()
+                # Trata www.
+                h1 = h1[4:] if h1.startswith("www.") else h1
+                h2 = h2[4:] if h2.startswith("www.") else h2
+                return h1 == h2
+            except Exception:
+                return False
+
         emails_by_company = {}
         total_emails = 0
 
         for base_url in base_urls:
+            # Sempre tenta extrair e-mails da URL base também
+            base_emails = extract_emails_from_url(base_url)
+            if base_emails:
+                emails_by_company[base_url] = set(base_emails)
+
             try:
                 headers = {
-                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36",
+                    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+                    "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
                 }
-                response = session.get(base_url, headers=headers, timeout=10)
+                response = session.get(base_url, headers=headers, timeout=15, allow_redirects=True)
             except Exception as e:
-                print(f"Não foi possível acessar a página principal: {base_url} -> {e}")
+                Actor.log.warning(f"Não foi possível acessar a página principal: {base_url} -> {e}")
                 continue
 
             if response.status_code != 200:
-                print(f"Falha ao acessar a página principal: {base_url} (Status {response.status_code})")
+                Actor.log.warning(f"Falha ao acessar a página principal: {base_url} (Status {response.status_code})")
                 continue
 
-            soup = BeautifulSoup(response.text, 'html.parser')
+            soup = BeautifulSoup(response.text, "html.parser")
 
-            company_links = set()
-            for a in soup.find_all('a', href=True):
-                href = a['href']
-                if href.startswith("http") and "associadas-abong" not in href:
-                    company_links.add(href)
+            # Coleta links internos (mesmo domínio). Isso funciona tanto para links absolutos quanto relativos.
+            internal_links = set()
+            for a in soup.find_all("a", href=True):
+                normalized = _normalize_link(base_url, a.get("href"))
+                if not normalized:
+                    continue
+                if _same_site(base_url, normalized):
+                    # Evita assets comuns
+                    if any(normalized.lower().endswith(ext) for ext in (".jpg", ".jpeg", ".png", ".gif", ".svg", ".webp", ".pdf", ".zip")):
+                        continue
+                    internal_links.add(normalized)
 
-            print(f"[{base_url}] Foram encontrados {len(company_links)} links para páginas de empresas.")
+            # Se não achou nada interno, ao menos mantém a própria URL base
+            if not internal_links:
+                internal_links.add(base_url)
 
-            for link in company_links:
-                print(f"Processando: {link}")
+            Actor.log.info(f"[{base_url}] Encontrados {len(internal_links)} link(s) internos para varrer.")
+
+            for link in sorted(internal_links):
+                Actor.log.info(f"Processando: {link}")
                 emails = extract_emails_from_url(link)
                 if emails:
-                    emails_by_company[link] = emails
-                time.sleep(1)
+                    if link not in emails_by_company:
+                        emails_by_company[link] = set()
+                    emails_by_company[link].update(emails)
+                time.sleep(0.5)
 
         def get_group_by_index(index: int, step: int = 50) -> str:
             start = (index // step) * step + 1
@@ -172,7 +224,17 @@ async def main() -> None:
         # Envia tudo para o dataset (push em lote para melhor performance)
         await Actor.push_data(results)
 
-        print(f"\nEmails extraídos foram enviados para o dataset do Apify. Total: {total_emails}")
+        # Exporta CSV para facilitar download (Key-Value Store)
+        try:
+            import pandas as pd
+            df = pd.DataFrame(results)
+            csv_text = df.to_csv(index=False)
+            await Actor.set_value("emails.csv", csv_text, content_type="text/csv")
+            Actor.log.info("CSV gerado e salvo como Key-Value Store item: emails.csv")
+        except Exception as e:
+            Actor.log.warning(f"Não foi possível gerar CSV: {e}")
+
+        Actor.log.info(f"Emails extraídos foram enviados para o dataset do Apify. Total: {total_emails}")
 
 if __name__ == "__main__":
     asyncio.run(main())
