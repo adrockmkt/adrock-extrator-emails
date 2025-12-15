@@ -1,3 +1,4 @@
+import asyncio
 import requests
 from requests.adapters import HTTPAdapter, Retry
 from bs4 import BeautifulSoup
@@ -35,79 +36,88 @@ def extract_emails_from_url(url):
         print(f"Exceção ao processar {url}: {e}")
     return emails
 
-def main():
-    Actor.init()
-    input_data = Actor.get_input()
+async def main() -> None:
+    # Apify Python SDK uses async APIs; use the Actor context manager
+    async with Actor:
+        input_data = await Actor.get_input() or {}
 
-    if not input_data or 'urls' not in input_data:
-        print("Erro: Nenhuma entrada 'urls' fornecida.")
-        Actor.exit()
-        return
+        base_urls = input_data.get('urls')
+        if not base_urls or not isinstance(base_urls, list):
+            await Actor.fail("Erro: campo obrigatório 'urls' não informado (lista de URLs).")
+            return
 
-    base_urls = input_data['urls']
-    print(f"{len(base_urls)} URLs recebidas como entrada via Apify.")
+        # Normaliza / deduplica URLs
+        base_urls = [u.strip() for u in base_urls if isinstance(u, str) and u.strip()]
+        base_urls = list(dict.fromkeys(base_urls))
 
-    emails_by_company = {}
-    total_emails = 0
+        if not base_urls:
+            await Actor.fail("Erro: campo 'urls' está vazio após normalização.")
+            return
 
-    for base_url in base_urls:
-        try:
-            headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"}
-            response = session.get(base_url, headers=headers, timeout=10)
-        except Exception as e:
-            print(f"Não foi possível acessar a página principal: {base_url} -> {e}")
-            continue
+        print(f"{len(base_urls)} URLs recebidas como entrada via Apify.")
 
-        if response.status_code != 200:
-            print(f"Falha ao acessar a página principal: {base_url}")
-            continue
+        emails_by_company = {}
+        total_emails = 0
 
-        soup = BeautifulSoup(response.text, 'html.parser')
-        
-        company_links = set()
-        for a in soup.find_all('a', href=True):
-            href = a['href']
-            if href.startswith("http") and "associadas-abong" not in href:
-                company_links.add(href)
+        for base_url in base_urls:
+            try:
+                headers = {
+                    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/115.0.0.0 Safari/537.36"
+                }
+                response = session.get(base_url, headers=headers, timeout=10)
+            except Exception as e:
+                print(f"Não foi possível acessar a página principal: {base_url} -> {e}")
+                continue
 
-        print(f"[{base_url}] Foram encontrados {len(company_links)} links para páginas de empresas.")
+            if response.status_code != 200:
+                print(f"Falha ao acessar a página principal: {base_url} (Status {response.status_code})")
+                continue
 
-        for link in company_links:
-            print(f"Processando: {link}")
-            emails = extract_emails_from_url(link)
-            if emails:
-                emails_by_company[link] = emails
-            time.sleep(1)
+            soup = BeautifulSoup(response.text, 'html.parser')
 
-    def get_group_by_index(index, step=50):
-        start = (index // step) * step + 1
-        end = start + step - 1
-        return f"{start}-{end}"
+            company_links = set()
+            for a in soup.find_all('a', href=True):
+                href = a['href']
+                if href.startswith("http") and "associadas-abong" not in href:
+                    company_links.add(href)
 
-    results = []
-    index = 0
-    for company_url, emails in emails_by_company.items():
-        for email in emails:
-            group = get_group_by_index(index)
-            results.append({
-                "url": company_url,
-                "email": email,
-                "group": group
-            })
-            total_emails += 1
-            index += 1
+            print(f"[{base_url}] Foram encontrados {len(company_links)} links para páginas de empresas.")
 
-    # Se não houver resultados, não grava linhas vazias no dataset
-    if not results:
-        print("Nenhum e-mail encontrado para as URLs informadas.")
-        Actor.exit()
-        return
+            for link in company_links:
+                print(f"Processando: {link}")
+                emails = extract_emails_from_url(link)
+                if emails:
+                    emails_by_company[link] = emails
+                time.sleep(1)
 
-    # Envia tudo para o dataset (push em lote para melhor performance)
-    Actor.push_data(results)
+        def get_group_by_index(index: int, step: int = 50) -> str:
+            start = (index // step) * step + 1
+            end = start + step - 1
+            return f"{start}-{end}"
 
-    Actor.exit()
-    print("\nEmails extraídos foram enviados para o dataset do Apify.")
+        results = []
+        index = 0
+
+        # Ordena para ter saída estável (ajuda testes / comparações)
+        for company_url in sorted(emails_by_company.keys()):
+            for email in sorted(emails_by_company[company_url]):
+                group = get_group_by_index(index)
+                results.append({
+                    "url": company_url,
+                    "email": email,
+                    "group": group,
+                })
+                total_emails += 1
+                index += 1
+
+        if not results:
+            print("Nenhum e-mail encontrado para as URLs informadas.")
+            return
+
+        # Envia tudo para o dataset (push em lote para melhor performance)
+        await Actor.push_data(results)
+
+        print(f"\nEmails extraídos foram enviados para o dataset do Apify. Total: {total_emails}")
 
 if __name__ == "__main__":
-    main()
+    asyncio.run(main())
