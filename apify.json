@@ -1,7 +1,8 @@
 {
   "name": "adrock-extrator-emails",
-  "description": "Extrai e-mails automaticamente de qualquer site informado, salvando os dados em um arquivo .txt e .csv com deduplicação. Ideal para ONGs, OSCs, fundações, empresas ou associações.",
-  "version": "0.0",
+  "title": "Ad Rock Email Extractor – Website Email Scraper",
+  "description": "Extract valid public email addresses from websites and their internal pages. Just provide one or more URLs and the actor will crawl the site, deduplicate results, group emails, and store them in a dataset ready for CSV export. Ideal for outreach, lead generation, NGOs, associations, and research.",
+  "version": "1.0.0",
   "dockerfile": "Dockerfile",
   "main": "extrator.py",
   "env": {
