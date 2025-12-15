@@ -1,0 +1,28 @@
+{
+  "actorSpecification": 1,
+  "fields": {
+    "type": "object",
+    "properties": {
+      "email": { "type": "string", "title": "Email address" },
+      "url": { "type": "string", "title": "Source URL" },
+      "group": { "type": "string", "title": "Group" }
+    },
+    "required": ["email", "url"]
+  },
+  "views": {
+    "overview": {
+      "title": "Overview",
+      "transformation": {
+        "fields": ["email", "url", "group"]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "email": { "label": "Email", "format": "text" },
+          "url": { "label": "URL", "format": "link" },
+          "group": { "label": "Grupo", "format": "text" }
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "actorSpecification": 1,
+  "name": "adrock-extrator-emails",
+  "title": "Ad Rock Email Extractor – Website Email Scraper",
+  "version": "1.0.0",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  }
+}
