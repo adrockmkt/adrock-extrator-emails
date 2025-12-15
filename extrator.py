@@ -5,6 +5,7 @@ import re
 import time
 from collections import defaultdict
 from apify import Actor
+from math import ceil
 
 # Configura uma sessão com retries
 session = requests.Session()
@@ -79,25 +80,32 @@ def main():
                 emails_by_company[link] = emails
             time.sleep(1)
 
+    def get_group_by_index(index, step=50):
+        start = (index // step) * step + 1
+        end = start + step - 1
+        return f"{start}-{end}"
+
     results = []
+    index = 0
     for company_url, emails in emails_by_company.items():
         for email in emails:
+            group = get_group_by_index(index)
             results.append({
                 "url": company_url,
-                "email": email
+                "email": email,
+                "group": group
             })
             total_emails += 1
+            index += 1
 
-    # Preenche com entradas vazias até chegar a 1000 resultados
-    while len(results) < 1000:
-        results.append({
-            "url": None,
-            "email": None
-        })
+    # Se não houver resultados, não grava linhas vazias no dataset
+    if not results:
+        print("Nenhum e-mail encontrado para as URLs informadas.")
+        Actor.exit()
+        return
 
-    # Envia tudo para o dataset
-    for r in results:
-        Actor.push_data(r)
+    # Envia tudo para o dataset (push em lote para melhor performance)
+    Actor.push_data(results)
 
     Actor.exit()
     print("\nEmails extraídos foram enviados para o dataset do Apify.")
