@@ -7,5 +7,31 @@
   "main": "extrator.py",
   "env": {
     "PYTHONUNBUFFERED": "1"
+  },
+  "storages": {
+    "dataset": {
+      "schema": {
+        "fields": [
+          {
+            "name": "email",
+            "type": "string",
+            "title": "Email address",
+            "description": "The extracted email address found on the page."
+          },
+          {
+            "name": "url",
+            "type": "string",
+            "title": "Source URL",
+            "description": "The URL where the email address was found."
+          },
+          {
+            "name": "group",
+            "type": "string",
+            "title": "Group",
+            "description": "The group of the result based on email count (e.g., 0-50, 51-100)."
+          }
+        ]
+      }
+    }
   }
 }
