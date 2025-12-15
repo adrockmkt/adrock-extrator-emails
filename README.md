@@ -33,13 +33,15 @@ It is designed for **outreach, lead generation, NGO/association research, and co
 
 ```text
 extrator_de_emails/
-├── extrator.py              # Main extraction script (used on Apify)
-├── input_schema.json        # Apify input UI schema
-├── output_schema.json       # Output schema (Dataset item shape)
-├── requirements.txt         # Python dependencies
-├── Dockerfile               # Container for Apify builds
-├── apify.json               # Actor metadata
-└── README.md
+├── .actor/
+│   ├── actor.json              # Actor definition (name, version, storages)
+│   └── dataset_schema.json     # Dataset schema for Apify Output UI
+├── extrator.py                 # Main extraction script (used on Apify)
+├── input_schema.json           # Apify input UI schema
+├── requirements.txt            # Python dependencies
+├── Dockerfile                  # Container for Apify builds
+├── apify.json                  # Actor metadata (runtime, env)
+├── README.md
 ```
 
 ## 🚀 Running on Apify
@@ -48,6 +50,10 @@ extrator_de_emails/
 2. Provide your URLs in the input field.
 3. Click **Start**.
 4. Open **Dataset → default** to see results and export to **CSV/JSON**.
+
+### Dataset & Export
+
+The extracted emails are available in the Apify Dataset with a structured table view. You can easily export the data to CSV or JSON formats directly from the Apify Console.
 
 ## 🧠 Notes & Limitations
 
@@ -101,6 +107,10 @@ O **Ad Rock Email Extractor** é um Actor do Apify (Python) que varre um ou mais
 2. Informe as URLs no input.
 3. Clique em **Start**.
 4. Acesse **Dataset → default** para ver os resultados e exportar em **CSV/JSON**.
+
+### Dataset & Export
+
+Os e-mails extraídos ficam disponíveis no Dataset do Apify com uma visualização em tabela estruturada. Você pode exportar facilmente os dados em formatos CSV ou JSON diretamente pelo Console do Apify.
 
 ## 🧠 Observações
 
