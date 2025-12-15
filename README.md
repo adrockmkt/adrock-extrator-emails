@@ -2,40 +2,58 @@
 
 ## 🧾 Description (EN)
 
-This project automates the extraction of public email addresses from websites using the [Apify](https://apify.com/) platform and a Python script. Ideal for outreach, lead generation, and data collection.
+**Ad Rock Email Extractor** is an Apify Actor (Python) that crawls one or more websites and extracts **public email addresses** found on the main pages and internal links.
+
+It is designed for **outreach, lead generation, NGO/association research, and contact database building**.
+
+## ✅ Key Features
+
+- Accepts **one or more URLs** as input
+- Crawls internal pages (same domain) to discover more emails
+- Extracts and validates email patterns
+- **Deduplicates** emails
+- Saves results to the run’s **Apify Dataset** (ready for **CSV export**)
+- Adds a **group** field (1–50, 51–100, …) to help organize large exports
 
 ## ⚙️ How It Works
 
-1. The user enters one or more URLs in the Apify interface.
-2. The Actor visits each provided website and crawls internal links.
-3. All valid email addresses found are automatically saved to the run's Dataset.
-4. The emails are grouped into a fixed list of 1,000 results (e.g., filled with nulls if fewer than 1,000) and stored in the Apify Dataset.
+1. You provide one or more URLs in the Actor input.
+2. The Actor visits each website and crawls internal links.
+3. All discovered emails are pushed to the run Dataset as items:
+
+```json
+{
+  "email": "contato@exemplo.org",
+  "url": "https://exemplo.org/contato",
+  "group": "1-50"
+}
+```
 
 ## 📁 Project Structure
 
-```
+```text
 extrator_de_emails/
 ├── extrator.py              # Main extraction script (used on Apify)
-├── input_schema.json        # Defines the visual interface for Apify input
-├── apify.json               # Actor configuration for Apify
-├── output_schema.json       # Defines how the results are displayed on Apify
+├── input_schema.json        # Apify input UI schema
+├── output_schema.json       # Output schema (Dataset item shape)
 ├── requirements.txt         # Python dependencies
-├── Dockerfile               # Container for running on Apify
+├── Dockerfile               # Container for Apify builds
+├── apify.json               # Actor metadata
+└── README.md
 ```
 
 ## 🚀 Running on Apify
 
-1. Go to [Apify Console](https://console.apify.com/).
-2. Create or clone the Actor with the code from this repository.
-3. Paste one or more URLs into the "List of URLs" field.
-4. Click "Start" and the system will extract valid emails.
-5. Access the results in "Dataset" > "default" and export to CSV, JSON, etc.
+1. Open Apify Console and create an Actor from this repository.
+2. Provide your URLs in the input field.
+3. Click **Start**.
+4. Open **Dataset → default** to see results and export to **CSV/JSON**.
 
-## 🧠 Notes
+## 🧠 Notes & Limitations
 
-- The system avoids duplicate email addresses.
-- Sites that block bots or require authentication may return no results.
-- Apify Dataset keeps the full history of previous runs.
+- Websites that block bots, rate-limit heavily, or require authentication may return fewer results.
+- The Actor extracts **only publicly available** emails found in HTML/text.
+- For large sites, consider limiting crawl depth/links (if you add those parameters in the future).
 
 ## ✉️ Contact
 
@@ -44,52 +62,50 @@ Developed by Rafael Marques Lins — Ad Rock Digital Mkt
 📲 WhatsApp: [Chat on WhatsApp](https://wa.me/5541991255859)  
 🌐 https://adrock.com.br
 
+---
+
 # 📨 Ad Rock Extrator de E-mails via Apify
 
-Este projeto automatiza a extração de e-mails públicos a partir de sites coletados previamente via Google Maps, utilizando a plataforma [Apify](https://apify.com/) e um script em Python. Ideal para curadoria de contatos institucionais, prospecção ou base de dados.
+## 🧾 Descrição (PT-BR)
 
----
+O **Ad Rock Email Extractor** é um Actor do Apify (Python) que varre um ou mais sites e extrai **endereços de e-mail públicos** encontrados na página principal e em links internos.
+
+É ideal para **prospecção, geração de leads, pesquisa de ONGs/associações e construção de base de contatos**.
+
+## ✅ Principais recursos
+
+- Aceita **uma ou mais URLs** como entrada
+- Percorre links internos (mesmo domínio) para encontrar mais e-mails
+- Extrai e valida padrões de e-mail
+- **Remove duplicados** automaticamente
+- Salva os resultados no **Dataset do Apify** (pronto para exportar em **CSV**)
+- Inclui o campo **group** (1–50, 51–100, …) para facilitar organização no export
 
 ## ⚙️ Como funciona
 
-1. O usuário insere uma ou mais URLs diretamente na interface do Apify.
-2. O Actor acessa cada site informado e percorre seus links internos.
-3. Todos os e-mails válidos encontrados são salvos automaticamente no Dataset da execução.
-4. Os e-mails são organizados em uma lista fixa de 1.000 resultados (preenchidos com `null` se houver menos) e armazenados no Dataset do Apify.
+1. Você informa uma ou mais URLs no input do Actor.
+2. O Actor acessa os sites e percorre links internos.
+3. Os e-mails encontrados são enviados ao Dataset da execução no formato:
 
----
-
-## 📁 Estrutura do projeto
-
-```
-extrator_de_emails/
-├── extrator.py              # Script principal de extração (usado no Apify)
-├── input_schema.json        # Define a interface visual para entrada via Apify
-├── apify.json               # Configuração do Actor no Apify
-├── output_schema.json       # Define como os resultados são exibidos no Apify
-├── requirements.txt         # Dependências Python
-├── Dockerfile               # Containerização para execução no Apify
+```json
+{
+  "email": "contato@exemplo.org",
+  "url": "https://exemplo.org/contato",
+  "group": "1-50"
+}
 ```
 
----
+## 🚀 Executando no Apify
 
-## 🚀 Executando via Apify
-
-1. Acesse o [Apify Console](https://console.apify.com/).
-2. Crie ou clone o Actor com o código deste repositório.
-3. Insira as URLs no campo "Lista de URLs" da interface visual.
-4. Clique em "Start". O sistema fará a varredura e extrairá os e-mails.
-5. Acesse os resultados em "Dataset" > "default" e exporte em CSV, JSON, etc.
-
----
+1. Acesse o Apify Console e crie um Actor a partir deste repositório.
+2. Informe as URLs no input.
+3. Clique em **Start**.
+4. Acesse **Dataset → default** para ver os resultados e exportar em **CSV/JSON**.
 
 ## 🧠 Observações
 
-- O sistema evita e-mails duplicados.
-- Sites que bloqueiam bots ou exigem autenticação podem não retornar resultados.
-- O Apify Dataset mantém o histórico de execuções anteriores.
-
----
+- Sites que bloqueiam bots, impõem rate limit, ou exigem login podem retornar menos resultados.
+- O Actor extrai apenas e-mails **publicamente disponíveis** no HTML/texto.
 
 ## ✉️ Contato
 
@@ -97,5 +113,3 @@ Desenvolvido por Rafael Marques Lins — Ad Rock Digital Mkt
 📧 rafael@adrock.com.br  
 📲 WhatsApp: [Clique aqui para conversar](https://wa.me/5541991255859)  
 🌐 https://adrock.com.br
-
----
