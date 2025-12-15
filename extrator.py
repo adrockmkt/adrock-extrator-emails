@@ -43,7 +43,9 @@ async def main() -> None:
 
         base_urls = input_data.get('urls')
         if not base_urls or not isinstance(base_urls, list):
-            await Actor.fail("Erro: campo obrigatório 'urls' não informado (lista de URLs).")
+            Actor.log.error("Erro: campo obrigatório 'urls' não informado (lista de URLs).")
+            # Actor.fail() in this SDK version does not accept a message argument
+            await Actor.exit(exit_code=1)
             return
 
         # Normaliza / deduplica URLs
@@ -51,7 +53,8 @@ async def main() -> None:
         base_urls = list(dict.fromkeys(base_urls))
 
         if not base_urls:
-            await Actor.fail("Erro: campo 'urls' está vazio após normalização.")
+            Actor.log.error("Erro: campo 'urls' está vazio após normalização.")
+            await Actor.exit(exit_code=1)
             return
 
         print(f"{len(base_urls)} URLs recebidas como entrada via Apify.")
@@ -111,7 +114,7 @@ async def main() -> None:
                 index += 1
 
         if not results:
-            print("Nenhum e-mail encontrado para as URLs informadas.")
+            Actor.log.info("Nenhum e-mail encontrado para as URLs informadas.")
             return
 
         # Envia tudo para o dataset (push em lote para melhor performance)
