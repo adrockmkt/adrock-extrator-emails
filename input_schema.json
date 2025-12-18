@@ -3,12 +3,16 @@
   "description": "Extraia e-mails automaticamente de sites e páginas associadas. Insira uma ou mais URLs e o sistema identificará e-mails válidos em links internos.",
   "type": "object",
   "schemaVersion": 1,
+  "default": {
+    "urls": "https://example.com"
+  },
   "properties": {
     "urls": {
       "title": "Lista de URLs",
       "type": "string",
       "editor": "textarea",
-      "description": "Insira as URLs, uma por linha, das quais deseja extrair e-mails."
+      "default": "https://example.com",
+      "description": "Insira uma ou mais URLs (uma por linha). Para testes automáticos, um exemplo seguro é https://example.com."
     }
   },
   "required": ["urls"]
