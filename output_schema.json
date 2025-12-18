@@ -1,24 +1,26 @@
-
-
 {
-  "title": "Extracted Emails Output Schema",
+  "title": "Extracted Emails",
+  "description": "Dataset containing unique public email addresses extracted from websites and their internal pages.",
   "type": "object",
   "properties": {
     "email": {
       "type": "string",
-      "title": "Email Address",
-      "description": "The extracted email address found on the page."
+      "title": "Email",
+      "description": "Publicly available email address extracted from the website.",
+      "example": "contact@example.org"
     },
-    "url": {
+    "sourceUrl": {
       "type": "string",
       "title": "Source URL",
-      "description": "The URL where the email address was found."
+      "description": "Exact page URL where the email was found.",
+      "example": "https://example.org/contact"
     },
-    "group": {
+    "domain": {
       "type": "string",
-      "title": "Group",
-      "description": "The group of the result based on email count (e.g., 0-50, 51-100)."
+      "title": "Domain",
+      "description": "Root domain of the website where the email was extracted.",
+      "example": "example.org"
     }
   },
-  "required": ["email", "url"]
+  "required": ["email", "sourceUrl"]
 }
