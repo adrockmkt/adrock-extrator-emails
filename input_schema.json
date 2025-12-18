@@ -3,9 +3,6 @@
   "description": "Extraia e-mails automaticamente de sites e páginas associadas. Insira uma ou mais URLs e o sistema identificará e-mails válidos em links internos.",
   "type": "object",
   "schemaVersion": 1,
-  "default": {
-    "urls": "https://example.com"
-  },
   "properties": {
     "urls": {
       "title": "Lista de URLs",
