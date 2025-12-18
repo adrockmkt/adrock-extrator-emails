@@ -2,7 +2,7 @@
 
 ## 🧾 Description (EN)
 
-**Ad Rock Email Extractor** is an Apify Actor (Python) that crawls one or more websites and extracts **public email addresses** found on the main pages and internal links.
+**Ad Rock Email Extractor** is a production-ready Apify Actor (Python) that crawls one or more websites and extracts **publicly available email addresses** from the homepage and internal pages.
 
 It is designed for **outreach, lead generation, NGO/association research, and contact database building**.
 
@@ -13,13 +13,13 @@ It is designed for **outreach, lead generation, NGO/association research, and co
 - Extracts and validates email patterns
 - **Deduplicates** emails
 - Saves results to the run’s **Apify Dataset** (ready for **CSV export**)
-- Adds a **group** field (1–50, 51–100, …) to help organize large exports
+- Adds a **group** field (1–50, 51–100, …) to help organize large datasets and pricing by result
 
 ## ⚙️ How It Works
 
 1. You provide one or more URLs in the Actor input.
 2. The Actor visits each website and crawls internal links.
-3. All discovered emails are pushed to the run Dataset as items:
+3. All discovered emails are pushed to the run Dataset as individual results (used for Apify pay-per-result pricing):
 
 ```json
 {
@@ -35,7 +35,7 @@ It is designed for **outreach, lead generation, NGO/association research, and co
 extrator_de_emails/
 ├── .actor/
 │   ├── actor.json              # Actor definition (name, version, storages)
-│   └── dataset_schema.json     # Dataset schema for Apify Output UI
+│   └── dataset_schema.json     # Dataset schema used by Apify Store Output UI & pricing
 ├── extrator.py                 # Main extraction script (used on Apify)
 ├── input_schema.json           # Apify input UI schema
 ├── requirements.txt            # Python dependencies
@@ -60,6 +60,7 @@ The extracted emails are available in the Apify Dataset with a structured table 
 - Websites that block bots, rate-limit heavily, or require authentication may return fewer results.
 - The Actor extracts **only publicly available** emails found in HTML/text.
 - For large sites, consider limiting crawl depth/links (if you add those parameters in the future).
+- This Actor is automatically tested by Apify using the default input schema and must complete successfully within 5 minutes.
 
 ## ✉️ Contact
 
@@ -74,7 +75,7 @@ Developed by Rafael Marques Lins — Ad Rock Digital Mkt
 
 ## 🧾 Descrição (PT-BR)
 
-O **Ad Rock Email Extractor** é um Actor do Apify (Python) que varre um ou mais sites e extrai **endereços de e-mail públicos** encontrados na página principal e em links internos.
+O **Ad Rock Email Extractor** é um Actor profissional do Apify (Python) que varre um ou mais sites e extrai **endereços de e-mail públicos**, tanto da página inicial quanto de links internos.
 
 É ideal para **prospecção, geração de leads, pesquisa de ONGs/associações e construção de base de contatos**.
 
@@ -85,7 +86,7 @@ O **Ad Rock Email Extractor** é um Actor do Apify (Python) que varre um ou mais
 - Extrai e valida padrões de e-mail
 - **Remove duplicados** automaticamente
 - Salva os resultados no **Dataset do Apify** (pronto para exportar em **CSV**)
-- Inclui o campo **group** (1–50, 51–100, …) para facilitar organização no export
+- Inclui o campo **group** (1–50, 51–100, …), usado para organização de grandes volumes e cobrança por resultado no Apify
 
 ## ⚙️ Como funciona
 
@@ -116,6 +117,7 @@ Os e-mails extraídos ficam disponíveis no Dataset do Apify com uma visualizaç
 
 - Sites que bloqueiam bots, impõem rate limit, ou exigem login podem retornar menos resultados.
 - O Actor extrai apenas e-mails **publicamente disponíveis** no HTML/texto.
+- Este Actor passa por testes automáticos do Apify e deve executar com sucesso usando o input padrão em até 5 minutos.
 
 ## ✉️ Contato
 
