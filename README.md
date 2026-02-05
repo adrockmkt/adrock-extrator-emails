@@ -1,61 +1,107 @@
-# 📨 Extrator de E-mails de Sites via Python + Apify
+# 📨 Extrator de E-mails de Sites via Python
 
-Este projeto automatiza a extração de e-mails públicos a partir de sites coletados previamente via Google Maps, utilizando a plataforma [Apify](https://apify.com/) e um script em Python. Ideal para curadoria de contatos institucionais, prospecção ou base de dados.
+Este projeto realiza a **extração de e-mails públicos a partir de sites institucionais**, utilizando um script em Python.  
+O fluxo foi pensado para **prospecção B2B, curadoria de contatos e geração de bases**, sempre a partir de **fontes públicas**.
+
+O extrator **não coleta dados do LinkedIn** nem realiza scraping autenticado — ele opera exclusivamente sobre **URLs de sites** previamente organizadas.
 
 ---
 
-## ⚙️ Como funciona
+## 🧠 Visão geral do fluxo
 
-1. O usuário coleta URLs de sites através de scrapers do Apify (ex: Google Maps Scraper).
-2. Essas URLs são salvas no arquivo `urls.txt`, uma por linha.
-3. O script `extrator.py` lê o arquivo, acessa os sites e percorre todos os links internos em busca de e-mails.
-4. Os e-mails encontrados são salvos no arquivo `emails_extraidos.txt`, sem duplicações.
+O projeto hoje funciona em **duas etapas independentes**:
+
+### 1️⃣ Segmentação e organização das empresas
+- A partir de um CSV de empresas (ex.: conexões do LinkedIn exportadas)
+- As empresas são **classificadas por segmento**
+- São gerados **CSVs separados por setor**
+- Esses CSVs servem como base para gerar listas de URLs
+
+Script responsável:
+```
+segmentar_empresas.py
+```
+
+> Esta etapa **não faz scraping**. Apenas trata e organiza dados.
+
+---
+
+### 2️⃣ Extração de e-mails a partir de sites
+- O usuário gera um `urls.txt` (uma URL por linha) a partir dos CSVs segmentados
+- O script acessa os sites e percorre links internos
+- E-mails públicos encontrados são extraídos e deduplicados
+
+Script responsável:
+```
+extrator.py
+```
 
 ---
 
 ## 📁 Estrutura do projeto
 
 ```
-extrator_de_emails/
+simple_extrator_de_emails/
 ├── extrator.py              # Script principal de extração
-├── urls.txt                 # Lista de URLs de entrada (uma por linha)
-├── emails_extraidos.txt     # Resultado acumulado da extração
-└── README.md                # Este arquivo
+├── segmentar_empresas.py    # Segmentação de empresas por setor
+├── urls.txt                 # URLs de entrada (gerado pelo usuário)
+├── emails_extraidos.txt     # Resultado da extração (runtime)
+├── README.md                # Documentação
 ```
+
+> Arquivos como `emails_extraidos.txt`, CSVs de entrada e pastas de saída são considerados **runtime/local** e podem estar ignorados via `.gitignore`.
 
 ---
 
-## 🚀 Executando
+## 🚀 Execução
 
-1. Instale as dependências:
+### Requisitos
+- Python 3.9+
+- Dependências listadas em `requirements.txt`
+
+Instalação:
 ```bash
 pip install -r requirements.txt
 ```
 
-2. Insira as URLs em `urls.txt` (uma por linha).
+---
 
-3. Execute o script:
+### Etapa 1 — Segmentação de empresas
+```bash
+python3 segmentar_empresas.py
+```
+
+Saída:
+- CSVs organizados por segmento (uso interno)
+
+---
+
+### Etapa 2 — Extração de e-mails
+1. Gere o arquivo `urls.txt` (uma URL por linha)
+2. Execute:
 ```bash
 python3 extrator.py
 ```
 
-Os e-mails encontrados serão salvos no arquivo `emails_extraidos.txt`.
+Os e-mails encontrados serão registrados em `emails_extraidos.txt`, com controle de duplicação.
 
 ---
 
-## 🧠 Observações
+## 🧠 Observações importantes
 
-- O script evita e-mails duplicados, tanto por link quanto por histórico.
-- Sites com bloqueios para bots podem impedir extração direta.
-- O arquivo de saída é acumulativo, ideal para execuções recorrentes.
+- Apenas e-mails **publicamente disponíveis** são coletados
+- O script evita duplicações por link e por histórico
+- Sites com proteção anti-bot podem bloquear a extração
+- O arquivo de saída é acumulativo, ideal para execuções recorrentes
+- O uso é voltado para **B2B / contatos institucionais**
 
 ---
 
-## ✉️ Contato
+## ✉️ Autor
 
-Desenvolvido por Rafael Marques Lins — Ad Rock Digital Mkt  
+Rafael Marques Lins  
+Ad Rock Digital Mkt  
+
 📧 rafael@adrock.com.br  
-📲 WhatsApp: [Clique aqui para conversar](https://wa.me/5541991255859)  
+📲 WhatsApp: https://wa.me/5541991255859  
 🌐 https://adrock.com.br
-
----
