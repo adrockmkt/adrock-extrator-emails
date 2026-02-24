@@ -1,19 +1,51 @@
-emails_extraidos.txt
+# ==============================
+# Python
+# ==============================
 __pycache__/
-*.log
-# Runtime outputs
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+build/
+dist/
+
+# ==============================
+# Virtual Environment
+# ==============================
+venv/
+.env
+.env.*
+
+# ==============================
+# Runtime / Output Files
+# ==============================
+urls.txt
 emails_extraidos.txt
+output/
+csv_enriquecido/
 csv_por_segmento/
 
-# Local inputs
-Connections.csv
-
-# Python
-__pycache__/
-*.pyc
-
-# Logs
+# ==============================
+# Data Files (local only)
+# ==============================
 *.log
+*.tmp
+*.sqlite3
 
-# macOS
+# ==============================
+# macOS / System
+# ==============================
 .DS_Store
+
+# ==============================
+# IDE / Editor
+# ==============================
+.vscode/
+.idea/
+
+# ==============================
+# Images / Temporary Assets
+# ==============================
+ray-so-export.png

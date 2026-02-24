@@ -536,3 +536,5 @@ https://www.fundacaonorbertoodebrecht.com/noticias/ -> fundacao@fundacao-no.com
 https://www.fundacaonorbertoodebrecht.com/termos-de-uso -> fundacao@fundacao-no.com.
 https://www.fundacaonorbertoodebrecht.com/aviso-de-privacidade/ -> lgpd_fno@fundacao-no.com.
 https://www.fundacaopavel.com.br/programas-sociais -> fundacaopavel@hotmail.com
+https://www.arbs.com.br/sobre -> arbsrs@gruporbs.com.br
+http://r3animal.org/galeria/ -> contato@r3animal.org

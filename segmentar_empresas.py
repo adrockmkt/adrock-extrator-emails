@@ -45,11 +45,21 @@ def classify_segment(company_name, website, industry):
 companies = defaultdict(list)
 
 with open(INPUT_CSV, newline="", encoding="utf-8") as f:
-    reader = csv.DictReader(f)
+    # Avança até encontrar o header real do LinkedIn
+    while True:
+        line = f.readline()
+        if not line:
+            raise ValueError("Header não encontrado no Connections.csv")
+        if line.lower().startswith("first name"):
+            header = [h.strip() for h in line.strip().split(",")]
+            break
+
+    reader = csv.DictReader(f, fieldnames=header)
+
     for row in reader:
-        company_name = normalize(row.get("Company") or row.get("Company Name"))
-        website = normalize(row.get("Company Website") or row.get("Website"))
-        industry = normalize(row.get("Industry"))
+        company_name = normalize(row.get("Company"))
+        website = ""  # Connections.csv não fornece site
+        industry = ""
 
         if not company_name:
             continue
