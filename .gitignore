@@ -27,12 +27,21 @@ output/
 csv_enriquecido/
 csv_por_segmento/
 
+# Industrial pipeline outputs
+linkedin_processed/
+runs/
+input_snapshot/
+.pipeline.lock
+run_summary.csv
+
 # ==============================
 # Data Files (local only)
 # ==============================
 *.log
 *.tmp
 *.sqlite3
+*.bak
+*.swp
 
 # ==============================
 # macOS / System

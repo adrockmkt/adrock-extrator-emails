@@ -1,119 +1,213 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+"""
+enriquecer_sites_google_maps.py (v2 - production ready)
+
+Enriquece empresas com:
+- website oficial
+- place_id
+- formatted_address
+- confidence_score
+
+Suporta:
+- argumentos CLI (--input, --output, --limit, --sleep)
+- resume automático (não reprocessa empresas já salvas)
+- validação de arquivo
+- logging estruturado
+"""
+
 import csv
 import os
 import time
+import argparse
+import logging
 import requests
 from dotenv import load_dotenv
+from pathlib import Path
 
-# -----------------------------
-# Configurações
-# -----------------------------
-INPUT_CSV = "csv_por_segmento/empresas_ong_terceiro_setor.csv"
-OUTPUT_DIR = "csv_enriquecido"
-OUTPUT_FILE = "empresas_ong_terceiro_setor_enriquecido.csv"
+# =========================
+# Configuração Logging
+# =========================
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
 
+# =========================
+# API URLs
+# =========================
 TEXT_SEARCH_URL = "https://maps.googleapis.com/maps/api/place/textsearch/json"
 PLACE_DETAILS_URL = "https://maps.googleapis.com/maps/api/place/details/json"
 
-load_dotenv()
-API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
-
-if not API_KEY:
-    raise ValueError("GOOGLE_MAPS_API_KEY não encontrada no .env")
-
-os.makedirs(OUTPUT_DIR, exist_ok=True)
-
-# -----------------------------
-# Funções auxiliares
-# -----------------------------
+# =========================
+# Utilidades
+# =========================
 def calculate_confidence(company_name, returned_name, website):
     score = 0.0
-    if returned_name and company_name.lower() in returned_name.lower():
+    company_lower = company_name.lower()
+
+    if returned_name and company_lower in returned_name.lower():
         score += 0.5
-    if website and company_name.lower().split()[0] in website.lower():
+
+    if website and company_lower.split()[0] in website.lower():
         score += 0.4
+
     if website:
         score += 0.1
+
     return round(min(score, 1.0), 2)
 
-def get_place_id(company_name):
+
+def normalize_name(name):
+    return name.strip().lower()
+
+
+def validate_input_file(path):
+    if not os.path.exists(path):
+        raise FileNotFoundError(f"Arquivo de entrada não encontrado: {path}")
+
+    if os.path.getsize(path) == 0:
+        raise ValueError(f"Arquivo vazio: {path}")
+
+
+# =========================
+# Google API
+# =========================
+def get_place_data(session, api_key, company_name):
     params = {
         "query": f"{company_name} site oficial",
-        "key": API_KEY
+        "key": api_key
     }
-    response = requests.get(TEXT_SEARCH_URL, params=params)
+
+    response = session.get(TEXT_SEARCH_URL, params=params, timeout=15)
     data = response.json()
 
-    if data.get("results"):
-        return data["results"][0]
-    return None
+    if not data.get("results"):
+        return None
 
-def get_place_details(place_id):
+    return data["results"][0]
+
+
+def get_place_details(session, api_key, place_id):
     params = {
         "place_id": place_id,
         "fields": "name,website,formatted_address",
-        "key": API_KEY
+        "key": api_key
     }
-    response = requests.get(PLACE_DETAILS_URL, params=params)
+
+    response = session.get(PLACE_DETAILS_URL, params=params, timeout=15)
     return response.json().get("result")
 
-# -----------------------------
-# Processamento
-# -----------------------------
-output_path = os.path.join(OUTPUT_DIR, OUTPUT_FILE)
 
-with open(INPUT_CSV, newline="", encoding="utf-8") as infile, \
-     open(output_path, "w", newline="", encoding="utf-8") as outfile:
+# =========================
+# Processo Principal
+# =========================
+def main():
 
-    reader = csv.DictReader(infile)
-    fieldnames = [
-        "company_name",
-        "company_website",
-        "place_id",
-        "formatted_address",
-        "confidence_score",
-        "segment",
-        "source"
-    ]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True, help="CSV de entrada")
+    parser.add_argument("--output", required=True, help="CSV enriquecido")
+    parser.add_argument("--limit", type=int, default=None)
+    parser.add_argument("--sleep", type=float, default=0.8)
+    args = parser.parse_args()
 
-    writer = csv.DictWriter(outfile, fieldnames=fieldnames)
-    writer.writeheader()
+    validate_input_file(args.input)
 
-    for row in reader:
-        company_name = row["company_name"]
+    load_dotenv()
+    api_key = os.getenv("GOOGLE_MAPS_API_KEY")
 
-        print(f"🔎 Buscando: {company_name}")
+    if not api_key:
+        raise ValueError("GOOGLE_MAPS_API_KEY não encontrada no .env")
 
-        place_data = get_place_id(company_name)
+    processed_companies = set()
 
-        if not place_data:
-            print("   ❌ Nenhum resultado encontrado.")
-            continue
+    # Resume mode
+    if os.path.exists(args.output):
+        with open(args.output, newline="", encoding="utf-8") as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                processed_companies.add(normalize_name(row["company_name"]))
 
-        place_id = place_data["place_id"]
-        details = get_place_details(place_id)
+        logging.info(f"Resume ativado: {len(processed_companies)} empresas já processadas.")
 
-        if not details:
-            print("   ❌ Sem detalhes.")
-            continue
+    session = requests.Session()
 
-        website = details.get("website", "")
-        formatted_address = details.get("formatted_address", "")
-        returned_name = details.get("name", "")
+    total = 0
+    enriched_count = 0
 
-        confidence = calculate_confidence(company_name, returned_name, website)
+    with open(args.input, newline="", encoding="utf-8") as infile, \
+         open(args.output, "a", newline="", encoding="utf-8") as outfile:
 
-        writer.writerow({
-            "company_name": company_name,
-            "company_website": website,
-            "place_id": place_id,
-            "formatted_address": formatted_address,
-            "confidence_score": confidence,
-            "segment": row["segment"],
-            "source": row["source"]
-        })
+        reader = csv.DictReader(infile)
 
-        print(f"   ✅ Website: {website} | Score: {confidence}")
+        fieldnames = [
+            "company_name",
+            "company_website",
+            "place_id",
+            "formatted_address",
+            "confidence_score",
+            "segment",
+            "source"
+        ]
 
-        time.sleep(1)  # rate limit seguro
+        writer = csv.DictWriter(outfile, fieldnames=fieldnames)
 
-print("\nProcesso concluído. CSV enriquecido gerado com sucesso.")
+        if os.path.getsize(args.output) == 0:
+            writer.writeheader()
+
+        for row in reader:
+
+            if args.limit and enriched_count >= args.limit:
+                break
+
+            company_name = row["company_name"]
+
+            if normalize_name(company_name) in processed_companies:
+                continue
+
+            total += 1
+            logging.info(f"Buscando: {company_name}")
+
+            place_data = get_place_data(session, api_key, company_name)
+
+            if not place_data:
+                logging.warning("Nenhum resultado encontrado.")
+                continue
+
+            place_id = place_data["place_id"]
+            details = get_place_details(session, api_key, place_id)
+
+            if not details:
+                logging.warning("Sem detalhes.")
+                continue
+
+            website = details.get("website", "")
+            formatted_address = details.get("formatted_address", "")
+            returned_name = details.get("name", "")
+
+            confidence = calculate_confidence(company_name, returned_name, website)
+
+            writer.writerow({
+                "company_name": company_name,
+                "company_website": website,
+                "place_id": place_id,
+                "formatted_address": formatted_address,
+                "confidence_score": confidence,
+                "segment": row.get("segment", ""),
+                "source": row.get("source", "linkedin")
+            })
+
+            enriched_count += 1
+            processed_companies.add(normalize_name(company_name))
+
+            logging.info(f"Website: {website} | Score: {confidence}")
+
+            time.sleep(args.sleep)
+
+    logging.info("Processo concluído com sucesso.")
+    logging.info(f"Empresas enriquecidas nesta execução: {enriched_count}")
+
+
+if __name__ == "__main__":
+    main()

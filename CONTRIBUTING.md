@@ -55,3 +55,69 @@ Rafael Marques Lins
 ---
 
 Obrigado por ajudar a tornar este projeto melhor!
+# 🔒 Contribuição & Governança do Projeto
+
+Este projeto evoluiu para um **pipeline industrial interno**, com controle de estado, versionamento por execução e governança operacional.
+
+Atualmente, **não é um projeto open source público para contribuições externas**.
+
+---
+
+## 📌 Modelo de Contribuição
+
+O desenvolvimento segue o seguinte padrão:
+
+- Alterações estruturais devem manter compatibilidade com:
+  - Controle incremental por hash
+  - Versionamento por run (`runs/YYYY-MM-DD_HH-MM-SS`)
+  - Snapshot automático de inputs
+  - Lock de execução (`.pipeline.lock`)
+  - Relatórios consolidados (`run_summary.csv`)
+- Qualquer modificação que altere schema de CSV deve:
+  - Preservar compatibilidade com `pipeline_extracao.py`
+  - Garantir resiliência contra ausência de colunas
+- Mudanças devem manter arquitetura modular e desacoplada.
+
+---
+
+## 🧠 Padrões Arquiteturais
+
+O projeto segue princípios de:
+
+- Pipeline idempotente
+- Execução incremental
+- Controle de integridade por SHA256
+- Logs persistentes por execução
+- CLI com flags operacionais (`--only-segment`, `--no-enrich`, `--dry-run`)
+
+---
+
+## 🚫 O que evitar
+
+- Alterar schema sem validação de compatibilidade
+- Remover controle de hash
+- Remover controle de lock
+- Adicionar dependências pesadas desnecessárias
+- Inserir lógica acoplada entre enriquecimento e extração
+
+---
+
+## 📦 Fluxo de Versionamento
+
+As mudanças relevantes devem:
+
+1. Atualizar o `CHANGELOG.md`
+2. Manter `.gitignore` coerente com arquivos de runtime
+3. Garantir que nenhuma pasta de execução (`runs/`) seja versionada
+
+---
+
+## 📫 Contato
+
+Rafael Marques Lins  
+📧 rafael@adrock.com.br  
+📲 https://wa.me/5541991255859  
+
+---
+
+Este projeto é parte do ecossistema interno da Ad Rock Digital Mkt e segue evolução contínua controlada.
