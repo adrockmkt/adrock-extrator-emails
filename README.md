@@ -1,190 +1,16 @@
-# 📨 Ad Rock Prospect Engine — Extrator e Enriquecedor de Empresas
-
-Este projeto é um **pipeline estruturado de prospecção B2B**, combinando:
-
-- Segmentação de empresas
-- Enriquecimento via Google Maps API
-- Geração automática de URLs
-- Crawl inteligente multi-thread
-- Classificação de e-mails por score
-- Exportação consolidada em CSV
-
-O sistema opera exclusivamente sobre **fontes públicas** (sites institucionais).
-Não realiza scraping autenticado.
-Não coleta dados privados.
-
----
-
-# 🧠 Arquitetura do Pipeline
-
-```
-Connections.csv / Base de Empresas
-        ↓
-segmentar_empresas.py
-        ↓
-csv_por_segmento/
-        ↓
-enriquecer_sites_google_maps.py
-        ↓
-csv_enriquecido/
-        ↓
-gerar_urls.py
-        ↓
-urls.txt
-        ↓
-extrator.py (v3)
-        ↓
-output/emails_consolidado.csv
-```
-
----
-
-# 📂 Estrutura do Projeto
-
-```
-simple_extrator_de_emails/
-├── segmentar_empresas.py
-├── enriquecer_sites_google_maps.py
-├── gerar_urls.py
-├── extrator.py
-├── Connections.csv
-├── csv_por_segmento/
-├── csv_enriquecido/
-├── output/
-├── urls.txt
-├── requirements.txt
-└── README.md
-```
-
----
-
-# 🔎 Módulos
-
-## 1️⃣ segmentar_empresas.py
-Classifica empresas por segmento a partir de um CSV base.
-
-Saída:
-```
-csv_por_segmento/*.csv
-```
-
----
-
-## 2️⃣ enriquecer_sites_google_maps.py
-Utiliza Google Maps API (Places) para:
-
-- Descobrir website institucional
-- Validar correspondência
-- Gerar CSV enriquecido
-
-Requer variável de ambiente:
-
-```
-GOOGLE_MAPS_API_KEY
-```
-
-Saída:
-```
-csv_enriquecido/*.csv
-```
-
----
-
-## 3️⃣ gerar_urls.py
-Extrai os domínios válidos dos CSVs enriquecidos e gera:
-
-```
-urls.txt
-```
-
----
-
-## 4️⃣ extrator.py (v3 — versão profissional)
-Crawler multi-thread com:
-
-- Retry automático
-- Controle de profundidade
-- Filtro de domínios irrelevantes
-- Priorização de páginas estratégicas
-- Score de qualidade de e-mail
-- Logging estruturado
-- CSV consolidado final
-
-Saída:
-```
-output/emails_consolidado.csv
-```
-
-Colunas do CSV final:
-
-- domain
-- email
-- score
-- source_url
-- depth
-
----
-
-# ⚙️ Execução Completa
-
-Instalar dependências:
-
-```bash
-pip install -r requirements.txt
-```
-
-Pipeline padrão:
-
-```bash
-python3 segmentar_empresas.py
-python3 enriquecer_sites_google_maps.py
-python3 gerar_urls.py
-python3 extrator.py
-```
-
----
-
-# 📊 Estratégia de Uso
-
-Este projeto foi estruturado para:
-
-- Prospecção B2B segmentada
-- Construção de base própria
-- Enriquecimento automatizado
-- Organização por segmento
-- Geração de lista pronta para outbound
-
----
-
-# 🚀 Roadmap Interno
-
-- CLI unificado (engine único)
-- Persistência incremental
-- Modo headless (Playwright) para sites JS
-- API interna para integração com outros bots Ad Rock
-- Dashboard de priorização comercial
-
----
-
-# 👤 Autor
-
-Rafael Marques Lins  
-Ad Rock Digital Mkt  
-
-🌐 https://adrock.com.br
 # 🏭 Ad Rock Prospect Engine — Pipeline Industrial de Prospecção B2B
 
-Este projeto evoluiu de um extrator simples para um **pipeline industrial de prospecção B2B**, com:
+Este projeto é um **pipeline industrial de prospecção B2B**, estruturado para operar com:
 
-- Segmentação empresarial estruturada
+- Segmentação empresarial
 - Enriquecimento via Google Maps API
-- Geração automática de URLs
-- Crawl multi-thread com scoring
+- Extração inteligente de e-mails
+- Classificação e priorização de empresas
 - Controle incremental por hash
-- Logs versionados por run
+- Versionamento por execução (runs)
 - Snapshot automático de inputs
 - Lock file contra execução simultânea
-- Relatório consolidado por execução
+- Relatório consolidado por run
 
 O sistema opera exclusivamente sobre **fontes públicas (sites institucionais)**.
 Não realiza scraping autenticado.
@@ -192,14 +18,16 @@ Não coleta dados privados.
 
 ---
 
-# 🧠 Arquitetura Industrial
+# 🧠 Arquitetura do Pipeline Atual
 
 ```
-Base (Connections / Empresas)
+linkedin_raw/                 → Dados exportados do LinkedIn
         ↓
-linkedin_processor.py  (segmentação + consolidação)
+linkedin_processor.py         → Limpeza, consolidação e segmentação
         ↓
-pipeline_extracao.py  (engine industrial)
+linkedin_processed/segmentos/ → Segmentos organizados
+        ↓
+pipeline_extracao.py          → Engine principal industrial
         ↓
    ├── Enriquecimento (Google Maps)
    ├── Geração de URLs
@@ -210,22 +38,42 @@ pipeline_extracao.py  (engine industrial)
 
 ---
 
-# 📂 Estrutura Atual do Projeto
+# 📂 Estrutura Real do Projeto
 
 ```
 simple_extrator_de_emails/
+├── linkedin_raw/
+│   ├── Company_Follows.csv
+│   ├── Connections.csv
+│   └── ImportedContacts.csv
+│
+├── linkedin_processed/
+│   ├── segmentos/
+│   ├── runs/
+│   ├── empresas_segmentadas.csv
+│   ├── empresas_consolidadas.csv
+│   ├── empresas_priorizadas.csv
+│   └── ...
+│
+├── csv_por_segmento/
+├── csv_enriquecido/
+├── output/
+│
 ├── linkedin_processor.py
 ├── pipeline_extracao.py
 ├── extrator.py
 ├── enriquecer_sites_google_maps.py
 ├── gerar_urls.py
+├── segmentar_empresas.py
+│
+├── Connections.csv
+├── urls.txt
+├── emails_extraidos.txt
+│
 ├── requirements.txt
-├── linkedin_processed/
-│   ├── segmentos/
-│   └── runs/
-├── output/
-├── logs/
-├── .run.lock
+├── CHANGELOG.md
+├── CONTRIBUTING.md
+├── LICENSE
 └── README.md
 ```
 
@@ -244,33 +92,32 @@ Evita:
 ---
 
 ## 2️⃣ Logs por Run
-Cada execução gera:
+Cada execução cria uma pasta em:
 
 ```
-linkedin_processed/runs/<run_id>/logs.txt
+linkedin_processed/runs/<run_id>/
 ```
 
-Contém:
-- Timestamp
-- Segmentos processados
-- Quantidade de empresas
-- Erros capturados
-- Status final
+Inclui:
+- Logs estruturados
+- Snapshot dos CSV de entrada
+- Hash de integridade
+- Relatório consolidado
 
 ---
 
-## 3️⃣ Snapshot de Inputs
-Antes de processar, o sistema salva automaticamente cópia dos CSV de entrada dentro da pasta da run.
+## 3️⃣ Snapshot Automático
+Antes de processar, o sistema salva cópia dos CSV utilizados na pasta da run.
 
-Isso garante:
+Garante:
 - Reprodutibilidade
 - Auditoria
-- Versionamento de base
+- Versionamento histórico
 
 ---
 
-## 4️⃣ Hash de Integridade
-Cada CSV processado gera hash SHA256.
+## 4️⃣ Controle Incremental por Hash
+Cada CSV recebe hash SHA256.
 
 O pipeline:
 - Detecta alterações reais
@@ -279,12 +126,18 @@ O pipeline:
 
 ---
 
-# ⚙️ Execução via Engine Principal
+# ⚙️ Execução
+
+Ativar ambiente virtual:
+
+```bash
+source venv/bin/activate
+```
 
 Instalar dependências:
 
 ```bash
-pip install -r requirements.txt
+pip3 install -r requirements.txt
 ```
 
 Execução padrão:
@@ -297,7 +150,7 @@ python3 linkedin_processor.py
 
 # 🧩 CLI Flags Disponíveis
 
-Processamento seletivo:
+Processar apenas um segmento:
 
 ```bash
 python3 linkedin_processor.py --only-segment ONG
@@ -309,7 +162,7 @@ Ignorar enriquecimento:
 python3 linkedin_processor.py --no-enrich
 ```
 
-Modo simulação (não executa extração):
+Modo simulação (sem executar extração):
 
 ```bash
 python3 linkedin_processor.py --dry-run
@@ -336,7 +189,7 @@ Contém:
 
 ---
 
-# 🎯 Estratégia de Uso
+# 🎯 Estratégia
 
 O pipeline foi projetado para:
 
@@ -348,13 +201,13 @@ O pipeline foi projetado para:
 
 ---
 
-# 🚀 Próximas Evoluções Planejadas
+# 🚀 Próximas Evoluções
 
-- Banco SQLite para controle de estado persistente
+- Banco SQLite para controle persistente
 - API interna REST
-- Dashboard de priorização comercial
-- Integração com sistema de outbound
+- Dashboard comercial
 - Cache inteligente de enriquecimento
+- Integração com sistema de outbound
 
 ---
 
