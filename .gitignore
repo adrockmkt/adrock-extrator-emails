@@ -27,8 +27,22 @@ output/
 csv_enriquecido/
 csv_por_segmento/
 
-# Industrial pipeline outputs
+# ==============================
+# Industrial Pipeline Artifacts (SENSITIVE DATA)
+# ==============================
+# Raw LinkedIn exports
+linkedin_raw/
+
+# All processed LinkedIn data (generated CSV, scoring, lots, prioritization)
 linkedin_processed/
+
+# Segment CSV generated automatically
+csv_por_segmento/
+
+# Enriched CSV generated automatically
+csv_enriquecido/
+
+# Per-run execution artifacts
 runs/
 input_snapshot/
 .pipeline.lock
@@ -40,6 +54,7 @@ run_summary.csv
 *.log
 *.tmp
 *.sqlite3
+*.db
 *.bak
 *.swp
 
