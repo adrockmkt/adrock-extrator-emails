@@ -9,6 +9,7 @@ import logging
 from urllib.parse import urlparse, urljoin
 from collections import deque
 from concurrent.futures import ThreadPoolExecutor, as_completed
+import argparse
 
 # ==============================
 # CONFIGURAÇÕES
@@ -18,7 +19,6 @@ REQUEST_DELAY = 0.5
 TIMEOUT = 8
 MAX_WORKERS = 5
 OUTPUT_DIR = "output"
-CONSOLIDATED_CSV = os.path.join(OUTPUT_DIR, "emails_consolidado.csv")
 
 BLOCKED_DOMAINS = [
     "facebook.com", "instagram.com", "linkedin.com",
@@ -175,8 +175,11 @@ def crawl_domain(base_url):
 # CSV CONSOLIDADO
 # ==============================
 
-def save_consolidated_csv(data):
-    with open(CONSOLIDATED_CSV, "w", newline="", encoding="utf-8") as f:
+def save_consolidated_csv(data, output_path):
+    # Garante que o diretório exista
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+
+    with open(output_path, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(
             f,
             fieldnames=["domain", "email", "score", "source_url", "depth"]
@@ -184,18 +187,34 @@ def save_consolidated_csv(data):
         writer.writeheader()
         writer.writerows(data)
 
-    logger.info(f"CSV consolidado salvo em {CONSOLIDATED_CSV}")
+    logger.info(f"CSV consolidado salvo em {output_path}")
 
 # ==============================
 # MAIN
 # ==============================
 
 def main():
-    if not os.path.exists("urls.txt"):
-        logger.error("urls.txt não encontrado.")
+    parser = argparse.ArgumentParser(description="Extrator de emails por domínio")
+    parser.add_argument(
+        "--urls-file",
+        default="urls.txt",
+        help="Arquivo contendo lista de URLs"
+    )
+    parser.add_argument(
+        "--output",
+        default=os.path.join(OUTPUT_DIR, "emails_consolidado.csv"),
+        help="Arquivo CSV de saída"
+    )
+    args = parser.parse_args()
+
+    urls_file = args.urls_file
+    output_path = args.output
+
+    if not os.path.exists(urls_file):
+        logger.error(f"{urls_file} não encontrado.")
         return
 
-    with open("urls.txt", "r", encoding="utf-8") as f:
+    with open(urls_file, "r", encoding="utf-8") as f:
         urls = [line.strip() for line in f if line.strip()]
 
     logger.info(f"{len(urls)} domínios carregados.")
@@ -219,7 +238,6 @@ def main():
                 logger.info(f"[{domain}] Nenhum email encontrado")
                 continue
 
-            # remover duplicados por email
             unique = {}
             for item in results:
                 email = item["email"]
@@ -232,8 +250,8 @@ def main():
 
             logger.info(f"[{domain}] {len(unique)} emails encontrados")
 
-    if all_results:
-        save_consolidated_csv(all_results)
+    # Sempre salva CSV (mesmo vazio) para manter rastreabilidade
+    save_consolidated_csv(all_results, output_path)
 
 if __name__ == "__main__":
     main()

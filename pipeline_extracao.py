@@ -69,8 +69,34 @@ def main():
     print("Gerando urls.txt")
     df["company_website"].to_csv(urls_path, index=False, header=False)
 
+    # Preparar saída por segmento
+    segment_name = input_path.stem
+    output_dir = Path("output") / segment_name
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    from datetime import datetime
+    timestamp = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
+
+    output_file = output_dir / f"{segment_name}_emails_{timestamp}.csv"
+
     print("==== EXECUTANDO EXTRATOR ====")
-    subprocess.run(["python3", args.extrator_script], check=True)
+    subprocess.run(
+        [
+            "python3",
+            args.extrator_script,
+            "--urls-file",
+            str(urls_path),
+            "--output",
+            str(output_file),
+        ],
+        check=True,
+    )
+
+    # Remover urls.txt após execução
+    if urls_path.exists():
+        urls_path.unlink()
+
+    print(f"Arquivo final salvo em: {output_file}")
 
     print("==== PIPELINE FINALIZADO ====")
 
