@@ -24,6 +24,9 @@ venv/
 urls.txt
 emails_extraidos.txt
 output/
+state/
+logs/
+output/by_segment/
 csv_enriquecido/
 csv_por_segmento/
 
@@ -55,6 +58,7 @@ run_summary.csv
 *.tmp
 *.sqlite3
 *.db
+state/*.json
 *.bak
 *.swp
 
