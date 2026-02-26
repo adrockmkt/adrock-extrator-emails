@@ -1,5 +1,3 @@
-
-
 # 📦 CHANGELOG — Ad Rock Prospect Engine
 
 Todas as alterações relevantes deste projeto serão documentadas neste arquivo.
@@ -7,6 +5,28 @@ Todas as alterações relevantes deste projeto serão documentadas neste arquivo
 O formato segue um padrão inspirado em Keep a Changelog.
 
 ---
+## [v4.1.0] — Industrial Resilience Upgrade
+
+### 🚀 Added
+- StateManager persistente com controle diário de uso de API
+- Controle de limite por execução (`EXECUTION_API_LIMIT`)
+- Modo `--resume` com leitura de estado por segmento
+- Modo `--skip-processed` para evitar retrabalho
+- Checkpoint granular por segmento (persistência após cada etapa)
+- Retry automático (3 tentativas) no enriquecimento
+- Retry automático (3 tentativas) na extração
+- Controle incremental baseado em hash do arquivo enriquecido
+- Estrutura preparada para checkpoint granular por empresa
+- Base arquitetural preparada para paralelização controlada por segmento
+
+### 🔧 Improved
+- Pipeline agora resiliente a interrupções (CTRL+C safe)
+- Execuções longas podem ser retomadas sem retrabalho
+- Governança real de custo operacional
+- Base preparada para ambiente multi-thread e futura execução distribuída
+
+---
+
 ## [v4.0.0] — Pipeline Industrial & Governança Operacional
 
 ### 🚀 Added
