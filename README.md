@@ -126,6 +126,68 @@ O pipeline:
 
 ---
 
+## 5️⃣ State Manager Persistente
+
+O pipeline agora mantém estado persistente em arquivo JSON.
+
+Controla:
+
+- Uso diário de API
+- Limite por execução
+- Status por segmento
+- Hash do input processado
+- Controle incremental real
+- Preparação para checkpoint granular por empresa
+
+Permite retomada segura mesmo após:
+
+- Interrupção manual (CTRL+C)
+- Queda de energia
+- Timeout de API
+- Erro parcial de segmento
+
+---
+
+## 6️⃣ Retry Automático
+
+Enriquecimento e Extração possuem:
+
+- Até 3 tentativas automáticas por segmento
+- Persistência de estado em falha definitiva
+- Continuidade do pipeline mesmo com erro parcial
+
+O sistema nunca trava a execução inteira por falha isolada.
+
+---
+
+## 7️⃣ Governança de API
+
+Controle industrial implementado:
+
+- `DAILY_API_LIMIT`
+- `EXECUTION_API_LIMIT`
+- Contador incremental de chamadas
+- Bloqueio automático ao atingir limite
+
+Evita:
+- Surpresas de custo
+- Estouro de quota
+- Execuções descontroladas
+
+---
+
+## 8️⃣ Arquitetura Preparada para Paralelização
+
+A estrutura atual já está preparada para:
+
+- Processamento paralelo por segmento
+- Thread pool controlado
+- Escalonamento futuro em ambiente distribuído
+
+Atualmente executa de forma sequencial controlada.
+
+---
+
 # ⚙️ Execução
 
 Ativar ambiente virtual:
@@ -170,6 +232,32 @@ python3 linkedin_processor.py --dry-run
 
 ---
 
+Retomar execução interrompida:
+
+```bash
+python3 linkedin_processor.py --resume
+```
+
+Pular segmentos já processados:
+
+```bash
+python3 linkedin_processor.py --skip-processed
+```
+
+Combinação segura recomendada:
+
+```bash
+python3 linkedin_processor.py --resume --skip-processed
+```
+
+Definir limite de execução (futuro uso):
+
+```bash
+python3 linkedin_processor.py --execution-limit 50
+```
+
+---
+
 # 📊 Relatório Consolidado da Run
 
 Cada execução gera automaticamente:
@@ -203,7 +291,9 @@ O pipeline foi projetado para:
 
 # 🚀 Próximas Evoluções
 
-- Banco SQLite para controle persistente
+- Checkpoint granular por empresa (nível enterprise)
+- Paralelização controlada por segmento
+- Banco SQLite para controle persistente avançado
 - API interna REST
 - Dashboard comercial
 - Cache inteligente de enriquecimento
