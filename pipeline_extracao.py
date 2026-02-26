@@ -9,6 +9,8 @@ from pathlib import Path
 import pandas as pd
 from urllib.parse import urlparse
 
+from state_manager import StateManager
+
 
 def parse_args():
     parser = argparse.ArgumentParser(description="Pipeline: Enriquecido → URLs → Extrator")
@@ -21,6 +23,8 @@ def parse_args():
 
 def main():
     args = parse_args()
+
+    state = StateManager()
 
     input_path = Path(args.input)
     if not input_path.exists():
@@ -64,6 +68,17 @@ def main():
 
     print(f"{len(df)} domínios válidos encontrados.")
 
+    # ===== INCREMENTAL FILTER (resume / skip processed) =====
+    original_count = len(df)
+    pending_domains = state.get_pending_domains(df["root_domain"].tolist())
+    df = df[df["root_domain"].isin(pending_domains)]
+
+    print(f"{len(df)} domínios pendentes (de {original_count}).")
+
+    if df.empty:
+        print("Nenhum domínio novo para processar. Encerrando.")
+        return
+
     urls_path = Path(args.urls_output)
 
     print("Gerando urls.txt")
@@ -91,6 +106,10 @@ def main():
         ],
         check=True,
     )
+
+    # ===== MARCAR DOMÍNIOS COMO PROCESSADOS =====
+    for domain in df["root_domain"].tolist():
+        state.mark_crawled(domain, emails_found=-1)
 
     # Remover urls.txt após execução
     if urls_path.exists():
