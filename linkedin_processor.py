@@ -18,6 +18,11 @@ import hashlib
 import atexit
 
 # ===============================
+# STATE MANAGER
+# ===============================
+from state_manager import StateManager
+
+# ===============================
 # RUN MANAGEMENT (INDUSTRIAL MODE)
 # ===============================
 
@@ -695,6 +700,14 @@ def executar_pipeline_full_auto_por_segmento(
 
     logger.info("==== INICIANDO PIPELINE FULL AUTO POR SEGMENTO ====")
 
+    # =========================
+    # API USAGE CONTROL
+    # =========================
+    state_manager = StateManager()
+    DAILY_API_LIMIT = 24000
+    EXECUTION_API_LIMIT = 2000
+    api_calls_this_run = 0
+
     segmentos_dir = OUTPUT_DIR / "segmentos"
     enriched_dir = run_dir / "enriched"
     extracted_dir = run_dir / "extracted"
@@ -723,15 +736,32 @@ def executar_pipeline_full_auto_por_segmento(
         input_hash = file_sha256(arquivo)
         previous_hash = segment_state.get("input_hash")
 
-        if previous_hash and previous_hash == input_hash:
-            logger.info(f"Segmento {segmento_nome} não sofreu alteração (hash igual). Pulando.")
-            continue
+        # =========================
+        # INDUSTRIAL RESUME LOGIC
+        # =========================
 
+        # Se o hash mudou, reseta estado do segmento
+        if previous_hash and previous_hash != input_hash:
+            logger.info(f"Segmento {segmento_nome} sofreu alteração (hash diferente). Resetando estado.")
+            segment_state["enriched"] = False
+            segment_state["extracted"] = False
+
+        # Atualiza hash atual
         segment_state["input_hash"] = input_hash
 
-        if segment_state.get("extracted"):
-            logger.info(f"Segmento {segmento_nome} já extraído anteriormente. Pulando.")
-            continue
+        # Skip processed ativado
+        if state.get("skip_processed"):
+
+            # Se já foi extraído e o hash é igual → pula com segurança
+            if segment_state.get("extracted") and previous_hash == input_hash:
+                logger.info(f"[SKIP_PROCESSED] Segmento {segmento_nome} já processado e sem alterações. Pulando.")
+                continue
+
+        else:
+            # Modo padrão: se já foi extraído e hash igual → pula
+            if segment_state.get("extracted") and previous_hash == input_hash:
+                logger.info(f"Segmento {segmento_nome} já extraído anteriormente e sem alterações. Pulando.")
+                continue
 
         enriched_path = enriched_dir / f"{segmento_safe}_enriquecido.csv"
 
@@ -741,22 +771,45 @@ def executar_pipeline_full_auto_por_segmento(
         elif enriched_path.exists() and segment_state.get("enriched"):
             logger.info(f"Segmento {segmento_nome} já possui arquivo enriquecido. Pulando enriquecimento.")
         else:
-            try:
-                if dry_run:
-                    logger.info(f"[DRY_RUN] Enriqueceria segmento {segmento_nome}")
-                else:
-                    subprocess.run([
-                        sys.executable,
-                        "enriquecer_sites_google_maps.py",
-                        "--input", str(arquivo),
-                        "--output", str(enriched_path),
-                        "--sleep", "0.6"
-                    ], check=True)
-                    segment_state["enriched"] = True
-                    save_pipeline_state(run_dir, state)
-            except subprocess.CalledProcessError as e:
-                logger.error(f"Erro ao enriquecer segmento {segmento_nome}: {e}")
-                continue
+            max_retries = 3
+            retry_count = 0
+            while retry_count < max_retries:
+                try:
+                    if dry_run:
+                        logger.info(f"[DRY_RUN] Enriqueceria segmento {segmento_nome}")
+                        break
+                    else:
+                        if not state_manager.can_call_api(DAILY_API_LIMIT):
+                            logger.warning("Limite diário de API atingido. Encerrando pipeline.")
+                            return
+
+                        if api_calls_this_run >= EXECUTION_API_LIMIT:
+                            logger.warning("Limite de API por execução atingido. Encerrando pipeline.")
+                            return
+
+                        subprocess.run([
+                            sys.executable,
+                            "enriquecer_sites_google_maps.py",
+                            "--input", str(arquivo),
+                            "--output", str(enriched_path),
+                            "--sleep", "0.6"
+                        ], check=True)
+
+                        state_manager.increment_api_calls(1)
+                        api_calls_this_run += 1
+
+                        segment_state["enriched"] = True
+                        save_pipeline_state(run_dir, state)
+
+                        break
+
+                except subprocess.CalledProcessError as e:
+                    retry_count += 1
+                    logger.warning(f"Erro no enriquecimento do segmento {segmento_nome}. Tentativa {retry_count}/{max_retries}")
+                    if retry_count >= max_retries:
+                        logger.error(f"Falha definitiva no enriquecimento do segmento {segmento_nome}")
+                        segment_state["enriched"] = False
+                        save_pipeline_state(run_dir, state)
 
         # Validação do arquivo enriquecido antes da extração
         if not enriched_path.exists():
@@ -774,24 +827,36 @@ def executar_pipeline_full_auto_por_segmento(
             continue
 
         # Extração
-        try:
-            if dry_run:
-                logger.info(f"[DRY_RUN] Extrairia emails do segmento {segmento_nome}")
-            else:
-                subprocess.run([
-                    sys.executable,
-                    "pipeline_extracao.py",
-                    "--input", str(enriched_path),
-                    "--confidence", "0.65"
-                ], check=True)
+        max_retries = 3
+        retry_count = 0
 
-                segment_state["extracted"] = True
-                state["segments"][segmento_nome]["output_hash"] = file_sha256(enriched_path)
-                save_pipeline_state(run_dir, state)
+        while retry_count < max_retries:
+            try:
+                if dry_run:
+                    logger.info(f"[DRY_RUN] Extrairia emails do segmento {segmento_nome}")
+                    break
+                else:
+                    subprocess.run([
+                        sys.executable,
+                        "pipeline_extracao.py",
+                        "--input", str(enriched_path),
+                        "--confidence", "0.65"
+                    ], check=True)
 
-            logger.info(f"Segmento {segmento_nome} processado com sucesso.")
-        except subprocess.CalledProcessError as e:
-            logger.error(f"Erro ao processar segmento {segmento_nome}: {e}")
+                    segment_state["extracted"] = True
+                    state["segments"][segmento_nome]["output_hash"] = file_sha256(enriched_path)
+                    save_pipeline_state(run_dir, state)
+
+                    break
+
+            except subprocess.CalledProcessError as e:
+                retry_count += 1
+                logger.warning(f"Erro na extração do segmento {segmento_nome}. Tentativa {retry_count}/{max_retries}")
+                if retry_count >= max_retries:
+                    logger.error(f"Falha definitiva na extração do segmento {segmento_nome}")
+                    segment_state["extracted"] = False
+                    save_pipeline_state(run_dir, state)
+        logger.info(f"Segmento {segmento_nome} processado com sucesso.")
 
 
     logger.info("==== PIPELINE POR SEGMENTO FINALIZADO ====")
@@ -830,6 +895,8 @@ def main() -> None:
     parser.add_argument("--no-enrich", action="store_true")
     parser.add_argument("--only-segment", type=str, default=None)
     parser.add_argument("--dry-run", action="store_true")
+    parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--skip-processed", action="store_true")
     args = parser.parse_args()
 
     lock_path = acquire_lock()
@@ -870,11 +937,39 @@ def main() -> None:
     # etapa 3: priorização estratégica
     empresas_priorizadas_df = gerar_priorizacao_empresas(empresas_sem_email_clean_df)
 
-    # Etapa opcional: pipeline automatizado completo por segmento
-    run_dir = init_run_directory()
-    state = load_pipeline_state(run_dir)
-    logger.info(f"Run directory criado: {run_dir}")
-    snapshot_input_files(run_dir, state)
+    # ===============================
+    # RUN MODE (NEW / RESUME)
+    # ===============================
+
+    runs_root = OUTPUT_DIR / "runs"
+    runs_root.mkdir(exist_ok=True)
+
+    if args.resume:
+        all_runs = sorted(
+            [d for d in runs_root.iterdir() if d.is_dir()],
+            key=lambda x: x.name
+        )
+
+        if not all_runs:
+            raise RuntimeError("Nenhum run anterior encontrado para --resume.")
+
+        run_dir = all_runs[-1]
+        logger.info(f"Modo RESUME ativado. Reutilizando run: {run_dir}")
+
+        state = load_pipeline_state(run_dir)
+    else:
+        run_dir = init_run_directory()
+        state = load_pipeline_state(run_dir)
+        logger.info(f"Novo run criado: {run_dir}")
+        snapshot_input_files(run_dir, state)
+
+    # flag global para skip processed
+    if args.skip_processed:
+        state["skip_processed"] = True
+    else:
+        state["skip_processed"] = False
+
+    save_pipeline_state(run_dir, state)
     executar_pipeline_full_auto_por_segmento(
         run_dir,
         state,
