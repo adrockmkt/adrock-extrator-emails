@@ -5,6 +5,23 @@ Todas as alterações relevantes deste projeto serão documentadas neste arquivo
 O formato segue um padrão inspirado em Keep a Changelog.
 
 ---
+
+## [v4.2.0] — Email Extraction Hardening & Noise Control
+
+### 🚀 Added
+- Regex de e-mail mais restritiva com validação de TLD mínimo (>=2 caracteres)
+- Filtro estrutural contra e-mails inválidos extraídos de PDF
+- Validação de local-part mínima (>=2 caracteres)
+- Bloqueio de múltiplos `@` no mesmo token
+- Filtro contra domínios malformados (ex: `a@b.c`, `sg.@n..`)
+- Sanitização adicional (`strip`, controle de tamanho mínimo)
+
+### 🔧 Improved
+- Redução drástica de falsos positivos em extrações provenientes de PDFs
+- Qualidade significativamente maior no CSV consolidado
+- Base pronta para futura camada de validação MX ou SMTP
+
+---
 ## [v4.1.0] — Industrial Resilience Upgrade
 
 ### 🚀 Added

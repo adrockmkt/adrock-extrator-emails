@@ -202,7 +202,9 @@ Instalar dependências:
 pip3 install -r requirements.txt
 ```
 
-Execução padrão:
+---
+
+## 🚀 Execução Completa (Todos os Segmentos)
 
 ```bash
 python3 linkedin_processor.py
@@ -210,21 +212,67 @@ python3 linkedin_processor.py
 
 ---
 
-# 🧩 CLI Flags Disponíveis
+## 🎯 Execução por Segmento Específico
 
 Processar apenas um segmento:
 
+### ONG
 ```bash
 python3 linkedin_processor.py --only-segment ONG
 ```
 
-Ignorar enriquecimento:
+### INDUSTRIA
+```bash
+python3 linkedin_processor.py --only-segment INDUSTRIA
+```
+
+### TECNOLOGIA
+```bash
+python3 linkedin_processor.py --only-segment TECNOLOGIA
+```
+
+### EDUCACAO
+```bash
+python3 linkedin_processor.py --only-segment EDUCACAO
+```
+
+(Substituir pelo nome exato do segmento gerado em `linkedin_processed/segmentos/`)
+
+---
+
+## 🔁 Retomar Execução Interrompida
+
+```bash
+python3 linkedin_processor.py --resume
+```
+
+---
+
+## ⏭️ Pular Segmentos Já Processados
+
+```bash
+python3 linkedin_processor.py --skip-processed
+```
+
+---
+
+## 🔐 Execução Segura Recomendada (Produção)
+
+```bash
+python3 linkedin_processor.py --resume --skip-processed
+```
+
+---
+
+## 🚫 Ignorar Enriquecimento Google Maps
 
 ```bash
 python3 linkedin_processor.py --no-enrich
 ```
 
-Modo simulação (sem executar extração):
+---
+
+## 🧪 Modo Simulação (Sem Extração Real)
 
 ```bash
 python3 linkedin_processor.py --dry-run
@@ -232,29 +280,13 @@ python3 linkedin_processor.py --dry-run
 
 ---
 
-Retomar execução interrompida:
-
-```bash
-python3 linkedin_processor.py --resume
-```
-
-Pular segmentos já processados:
-
-```bash
-python3 linkedin_processor.py --skip-processed
-```
-
-Combinação segura recomendada:
-
-```bash
-python3 linkedin_processor.py --resume --skip-processed
-```
-
-Definir limite de execução (futuro uso):
+## 📏 Definir Limite de Execução (Controle de API)
 
 ```bash
 python3 linkedin_processor.py --execution-limit 50
 ```
+
+Limita a quantidade de empresas processadas na execução atual.
 
 ---
 

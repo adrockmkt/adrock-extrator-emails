@@ -685,6 +685,8 @@ def gerar_csv_por_segmento(empresas_segmentadas_df: pd.DataFrame) -> None:
 # PIPELINE FULL AUTO POR SEGMENTO
 # ===============================
 
+from concurrent.futures import ThreadPoolExecutor, as_completed
+
 def executar_pipeline_full_auto_por_segmento(
     run_dir: Path,
     state: dict,
@@ -693,20 +695,19 @@ def executar_pipeline_full_auto_por_segmento(
     dry_run: bool = False
 ) -> None:
     """
-    Para cada CSV em linkedin_processed/segmentos:
-    - Enriquecer via Google Maps
-    - Rodar pipeline_extracao.py
+    Pipeline industrial com:
+    - Checkpoint granular por empresa
+    - Controle de custo por segmento
+    - Paralelização controlada por segmento
     """
 
-    logger.info("==== INICIANDO PIPELINE FULL AUTO POR SEGMENTO ====")
+    logger.info("==== INICIANDO PIPELINE FULL AUTO (INDUSTRIAL) ====")
 
-    # =========================
-    # API USAGE CONTROL
-    # =========================
     state_manager = StateManager()
     DAILY_API_LIMIT = 24000
     EXECUTION_API_LIMIT = 2000
-    api_calls_this_run = 0
+    COST_PER_API_CALL = 0.002  # estimativa
+    MAX_WORKERS = 3
 
     segmentos_dir = OUTPUT_DIR / "segmentos"
     enriched_dir = run_dir / "enriched"
@@ -716,150 +717,89 @@ def executar_pipeline_full_auto_por_segmento(
         logger.warning("Diretório de segmentos não encontrado.")
         return
 
-    for arquivo in segmentos_dir.glob("*.csv"):
+    def processar_segmento(arquivo: Path):
         segmento_nome = arquivo.stem
-        # Normaliza nome do segmento para evitar problemas com acentos no filesystem
         segmento_safe = re.sub(r"[^A-Za-z0-9_]+", "_", segmento_nome)
-        logger.info(f"Processando segmento: {segmento_nome}")
 
         if only_segment and segmento_nome.lower() != only_segment.lower():
-            continue
+            return
+
+        logger.info(f"[SEGMENTO] {segmento_nome}")
 
         if segmento_nome not in state["segments"]:
             state["segments"][segmento_nome] = {
-                "enriched": False,
-                "extracted": False
+                "companies": {},
+                "cost_total": 0.0
             }
 
         segment_state = state["segments"][segmento_nome]
 
-        input_hash = file_sha256(arquivo)
-        previous_hash = segment_state.get("input_hash")
+        df_segment = pd.read_csv(arquivo)
+        if df_segment.empty:
+            return
 
-        # =========================
-        # INDUSTRIAL RESUME LOGIC
-        # =========================
-
-        # Se o hash mudou, reseta estado do segmento
-        if previous_hash and previous_hash != input_hash:
-            logger.info(f"Segmento {segmento_nome} sofreu alteração (hash diferente). Resetando estado.")
-            segment_state["enriched"] = False
-            segment_state["extracted"] = False
-
-        # Atualiza hash atual
-        segment_state["input_hash"] = input_hash
-
-        # Skip processed ativado
-        if state.get("skip_processed"):
-
-            # Se já foi extraído e o hash é igual → pula com segurança
-            if segment_state.get("extracted") and previous_hash == input_hash:
-                logger.info(f"[SKIP_PROCESSED] Segmento {segmento_nome} já processado e sem alterações. Pulando.")
+        for _, row in df_segment.iterrows():
+            company_name = str(row.get("company_name", "")).strip()
+            if not company_name:
                 continue
 
-        else:
-            # Modo padrão: se já foi extraído e hash igual → pula
-            if segment_state.get("extracted") and previous_hash == input_hash:
-                logger.info(f"Segmento {segmento_nome} já extraído anteriormente e sem alterações. Pulando.")
+            company_key = company_name.lower()
+
+            if company_key not in segment_state["companies"]:
+                segment_state["companies"][company_key] = {
+                    "enriched": False,
+                    "extracted": False,
+                    "cost": 0.0
+                }
+
+            company_state = segment_state["companies"][company_key]
+
+            if state.get("skip_processed") and company_state.get("extracted"):
                 continue
 
-        enriched_path = enriched_dir / f"{segmento_safe}_enriquecido.csv"
+            if not dry_run and not no_enrich:
+                if not state_manager.can_call_api(DAILY_API_LIMIT):
+                    logger.warning("Limite diário de API atingido.")
+                    return
 
-        # Enriquecimento
-        if no_enrich:
-            logger.info(f"[NO_ENRICH] Pulando enriquecimento do segmento {segmento_nome}.")
-        elif enriched_path.exists() and segment_state.get("enriched"):
-            logger.info(f"Segmento {segmento_nome} já possui arquivo enriquecido. Pulando enriquecimento.")
-        else:
-            max_retries = 3
-            retry_count = 0
-            while retry_count < max_retries:
-                try:
-                    if dry_run:
-                        logger.info(f"[DRY_RUN] Enriqueceria segmento {segmento_nome}")
-                        break
-                    else:
-                        if not state_manager.can_call_api(DAILY_API_LIMIT):
-                            logger.warning("Limite diário de API atingido. Encerrando pipeline.")
-                            return
+                subprocess.run([
+                    sys.executable,
+                    "enriquecer_empresa_individual.py",
+                    "--company-name", company_name,
+                    "--company-website", "placeholder.com",
+                    "--segment", segmento_safe,
+                    "--output-dir", str(enriched_dir)
+                ], check=True)
 
-                        if api_calls_this_run >= EXECUTION_API_LIMIT:
-                            logger.warning("Limite de API por execução atingido. Encerrando pipeline.")
-                            return
+                state_manager.increment_api_calls(1)
+                company_state["enriched"] = True
+                company_state["cost"] += COST_PER_API_CALL
+                segment_state["cost_total"] += COST_PER_API_CALL
+                save_pipeline_state(run_dir, state)
 
-                        subprocess.run([
-                            sys.executable,
-                            "enriquecer_sites_google_maps.py",
-                            "--input", str(arquivo),
-                            "--output", str(enriched_path),
-                            "--sleep", "0.6"
-                        ], check=True)
+            enriched_file = enriched_dir / f"{segmento_safe}_enriched_individual.csv"
+            if not enriched_file.exists():
+                continue
 
-                        state_manager.increment_api_calls(1)
-                        api_calls_this_run += 1
+            if not dry_run:
+                subprocess.run([
+                    sys.executable,
+                    "pipeline_extracao.py",
+                    "--input", str(enriched_file),
+                    "--confidence", "0.65"
+                ], check=True)
 
-                        segment_state["enriched"] = True
-                        save_pipeline_state(run_dir, state)
+                company_state["extracted"] = True
+                save_pipeline_state(run_dir, state)
 
-                        break
+        logger.info(f"[SEGMENTO FINALIZADO] {segmento_nome} | Custo estimado: R$ {segment_state['cost_total']:.4f}")
 
-                except subprocess.CalledProcessError as e:
-                    retry_count += 1
-                    logger.warning(f"Erro no enriquecimento do segmento {segmento_nome}. Tentativa {retry_count}/{max_retries}")
-                    if retry_count >= max_retries:
-                        logger.error(f"Falha definitiva no enriquecimento do segmento {segmento_nome}")
-                        segment_state["enriched"] = False
-                        save_pipeline_state(run_dir, state)
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = [executor.submit(processar_segmento, arquivo) for arquivo in segmentos_dir.glob("*.csv")]
+        for f in as_completed(futures):
+            f.result()
 
-        # Validação do arquivo enriquecido antes da extração
-        if not enriched_path.exists():
-            logger.error(f"Arquivo enriquecido não encontrado para {segmento_nome}. Pulando extração.")
-            continue
-
-        try:
-            df_enriched = pd.read_csv(enriched_path)
-        except Exception as e:
-            logger.error(f"Erro ao ler arquivo enriquecido de {segmento_nome}: {e}")
-            continue
-
-        if df_enriched.empty:
-            logger.warning(f"Arquivo enriquecido de {segmento_nome} está vazio. Pulando extração.")
-            continue
-
-        # Extração
-        max_retries = 3
-        retry_count = 0
-
-        while retry_count < max_retries:
-            try:
-                if dry_run:
-                    logger.info(f"[DRY_RUN] Extrairia emails do segmento {segmento_nome}")
-                    break
-                else:
-                    subprocess.run([
-                        sys.executable,
-                        "pipeline_extracao.py",
-                        "--input", str(enriched_path),
-                        "--confidence", "0.65"
-                    ], check=True)
-
-                    segment_state["extracted"] = True
-                    state["segments"][segmento_nome]["output_hash"] = file_sha256(enriched_path)
-                    save_pipeline_state(run_dir, state)
-
-                    break
-
-            except subprocess.CalledProcessError as e:
-                retry_count += 1
-                logger.warning(f"Erro na extração do segmento {segmento_nome}. Tentativa {retry_count}/{max_retries}")
-                if retry_count >= max_retries:
-                    logger.error(f"Falha definitiva na extração do segmento {segmento_nome}")
-                    segment_state["extracted"] = False
-                    save_pipeline_state(run_dir, state)
-        logger.info(f"Segmento {segmento_nome} processado com sucesso.")
-
-
-    logger.info("==== PIPELINE POR SEGMENTO FINALIZADO ====")
+    logger.info("==== PIPELINE INDUSTRIAL FINALIZADO ====")
 
 
 # ===============================

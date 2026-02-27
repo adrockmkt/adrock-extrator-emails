@@ -33,7 +33,7 @@ PRIORITY_PATHS = [
 ]
 
 EMAIL_REGEX = re.compile(
-    r"[a-zA-Z0-9_.+-]+@[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+"
+    r"\b[a-zA-Z0-9._%+-]{2,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
 )
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -104,7 +104,27 @@ def extract_emails_from_text(text, source_url, depth):
     found = EMAIL_REGEX.findall(text)
 
     for email in found:
-        email = email.lower()
+        email = email.lower().strip()
+
+        # Filtros anti‑ruído (PDFs geram muito lixo)
+        if len(email) < 6:
+            continue
+
+        if email.count("@") != 1:
+            continue
+
+        local, domain = email.split("@")
+
+        # evita coisas tipo a@b.c ou sg.@n..
+        if len(local) < 2:
+            continue
+
+        if ".." in email:
+            continue
+
+        if not re.search(r"\.[a-z]{2,}$", domain):
+            continue
+
         if any(bad in email for bad in ["example", "test@", "no-reply"]):
             continue
 

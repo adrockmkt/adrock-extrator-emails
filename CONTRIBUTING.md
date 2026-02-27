@@ -121,3 +121,106 @@ Rafael Marques Lins
 ---
 
 Este projeto é parte do ecossistema interno da Ad Rock Digital Mkt e segue evolução contínua controlada.
+# 🔒 Contribuição & Governança — Simple Extrator de Emails
+
+Este projeto evoluiu para uma **ferramenta interna industrial da Ad Rock Digital Mkt**, com controle operacional por segmento, versionamento por execução e governança técnica estruturada.
+
+Não se trata mais de um projeto open source para contribuições públicas.
+
+---
+
+# 🎯 Natureza do Projeto
+
+O sistema opera como:
+
+- Pipeline idempotente
+- Processamento por segmento (`--only-segment`)
+- Controle incremental por hash
+- Versionamento por run (`runs/YYYY-MM-DD_HH-MM-SS`)
+- Controle de execução via lock (`.pipeline.lock`)
+- Consolidação automática de relatórios
+- Controle de custo de API
+- Hardening de extração de e-mails (v4.2.0)
+
+Toda alteração deve preservar esses princípios.
+
+---
+
+# 🧠 Diretrizes Técnicas Obrigatórias
+
+## 1️⃣ Compatibilidade Estrutural
+
+Qualquer modificação deve:
+
+- Manter compatibilidade com `linkedin_processor.py`
+- Não quebrar schema de CSV já gerado
+- Preservar colunas esperadas pelo consolidado
+- Manter funcionamento do controle de resume
+
+Se houver alteração de schema:
+
+- Atualizar `CHANGELOG.md`
+- Documentar impacto
+- Garantir retrocompatibilidade
+
+---
+
+## 2️⃣ Extração de E-mails
+
+A partir da versão v4.2.0:
+
+- Regex restritiva obrigatória
+- Filtro estrutural contra ruído de PDF
+- Validação mínima de local-part
+- Validação mínima de TLD
+- Bloqueio de múltiplos `@`
+- Sanitização obrigatória
+
+É proibido relaxar o filtro para aumentar volume sacrificando qualidade.
+
+---
+
+## 3️⃣ Arquitetura
+
+Deve permanecer:
+
+- Modular
+- Desacoplada
+- Sem dependências pesadas desnecessárias
+- Sem acoplamento entre enriquecimento e crawler
+
+---
+
+# 🚫 O que NÃO é permitido
+
+- Remover controle de hash
+- Remover controle de lock
+- Versionar pastas `runs/`
+- Alterar comportamento do resume sem documentação
+- Adicionar scraping agressivo fora do padrão definido
+
+---
+
+# 📦 Versionamento
+
+Mudanças relevantes exigem:
+
+1. Atualização do `CHANGELOG.md`
+2. Atualização do `README.md` (se afetar uso)
+3. Versionamento semântico (ex: v4.2.0)
+4. Commit descritivo técnico
+
+---
+
+# 👤 Governança
+
+Responsável técnico:
+
+Rafael Marques Lins  
+Ad Rock Digital Mkt  
+rafael@adrock.com.br  
+https://wa.me/5541991255859  
+
+---
+
+Este projeto faz parte do ecossistema interno da Ad Rock e sua evolução é controlada e estratégica.
