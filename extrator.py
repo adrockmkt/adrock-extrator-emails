@@ -20,10 +20,29 @@ TIMEOUT = 8
 MAX_WORKERS = 5
 OUTPUT_DIR = "output"
 
+# Limites de segurança por domínio (evita travar em sites gigantes / protegidos)
+MAX_PAGES_PER_DOMAIN = 250            # hard cap de páginas por domínio
+MAX_SECONDS_PER_DOMAIN = 180          # hard cap de tempo por domínio
+MAX_QUEUE_SIZE = 4000                 # evita fila infinita
+MAX_CONSECUTIVE_ERRORS = 8            # aborta domínio após muitos erros seguidos
+MAX_CONSECUTIVE_5XX = 5               # aborta domínio após muitos 5xx seguidos
+
+# Paths e padrões comuns de endpoints técnicos (AEM/CQ, admin, etc.) que não ajudam a achar emails
+BLOCKED_PATH_SUBSTRINGS = [
+    "/_cq_", "/content/_cq_", "/content/", "/etc/", "/system/", "/libs/",
+    "/wp-admin", "/wp-json", "/cdn-cgi/", "/login", "/signin", "/sso",
+]
+
+# Denylist para domínios muito grandes / que tendem a bloquear crawl
+DENYLIST_DOMAINS = [
+    "accenture.com",
+]
+
 BLOCKED_DOMAINS = [
     "facebook.com", "instagram.com", "linkedin.com",
-    "youtube.com", "twitter.com", "wa.me",
-    "mercadopago", "drive.google.com"
+    "youtube.com", "twitter.com", "x.com", "t.co", "wa.me",
+    "mercadopago", "drive.google.com",
+    "google.com", "googleusercontent.com", "gstatic.com",
 ]
 
 PRIORITY_PATHS = [
@@ -86,6 +105,11 @@ def is_valid_link(link, base_domain):
     if any(blocked in parsed.netloc for blocked in BLOCKED_DOMAINS):
         return False
 
+    # bloqueia endpoints técnicos/administrativos que não ajudam na extração de email
+    lower = link.lower()
+    if any(p in lower for p in BLOCKED_PATH_SUBSTRINGS):
+        return False
+
     return base_domain in parsed.netloc
 
 
@@ -143,14 +167,42 @@ def extract_emails_from_text(text, source_url, depth):
 
 def crawl_domain(base_url):
     base_domain = normalize_domain(base_url)
+
+    # Denylist: evita crawl em domínios grandes/bloqueados
+    if any(d == base_domain or base_domain.endswith("." + d) for d in DENYLIST_DOMAINS):
+        logger.info(f"[{base_domain}] SKIPPED (denylist)")
+        return []
+
     visited = set()
     queue = deque([(base_url, 0)])
     emails_found = []
+
+    start_ts = time.time()
+    pages_processed = 0
+    consecutive_errors = 0
+    consecutive_5xx = 0
 
     logger.info(f"[{base_domain}] Iniciando crawl")
 
     while queue:
         current_url, depth = queue.popleft()
+
+        # hard limits para evitar travar em domínios gigantes
+        if (time.time() - start_ts) > MAX_SECONDS_PER_DOMAIN:
+            logger.warning(f"[{base_domain}] Abortando por limite de tempo ({MAX_SECONDS_PER_DOMAIN}s)")
+            break
+        if pages_processed >= MAX_PAGES_PER_DOMAIN:
+            logger.warning(f"[{base_domain}] Abortando por limite de páginas ({MAX_PAGES_PER_DOMAIN})")
+            break
+        if len(queue) > MAX_QUEUE_SIZE:
+            logger.warning(f"[{base_domain}] Abortando por fila grande demais (>{MAX_QUEUE_SIZE})")
+            break
+        if consecutive_errors >= MAX_CONSECUTIVE_ERRORS:
+            logger.warning(f"[{base_domain}] Abortando por muitos erros consecutivos ({MAX_CONSECUTIVE_ERRORS})")
+            break
+        if consecutive_5xx >= MAX_CONSECUTIVE_5XX:
+            logger.warning(f"[{base_domain}] Abortando por muitos 5xx consecutivos ({MAX_CONSECUTIVE_5XX})")
+            break
 
         if depth > MAX_DEPTH:
             continue
@@ -163,11 +215,25 @@ def crawl_domain(base_url):
         try:
             response = session.get(current_url, headers=HEADERS, timeout=TIMEOUT)
         except Exception as e:
+            consecutive_errors += 1
             logger.warning(f"Erro ao acessar {current_url}: {e}")
             continue
 
-        if response.status_code != 200:
+        # status handling
+        if response.status_code >= 500:
+            consecutive_errors += 1
+            consecutive_5xx += 1
             continue
+
+        if response.status_code != 200:
+            consecutive_errors += 1
+            consecutive_5xx = 0
+            continue
+
+        # sucesso
+        consecutive_errors = 0
+        consecutive_5xx = 0
+        pages_processed += 1
 
         soup = BeautifulSoup(response.text, "html.parser")
         text = soup.get_text(" ", strip=True)
@@ -182,10 +248,15 @@ def crawl_domain(base_url):
             if not is_valid_link(href, base_domain):
                 continue
 
+            if href in visited:
+                continue
+
+            next_item = (href, depth + 1)
+
             if any(path in href.lower() for path in PRIORITY_PATHS):
-                queue.appendleft((href, depth + 1))
+                queue.appendleft(next_item)
             else:
-                queue.append((href, depth + 1))
+                queue.append(next_item)
 
         time.sleep(REQUEST_DELAY)
 

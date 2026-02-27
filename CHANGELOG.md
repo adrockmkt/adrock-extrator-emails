@@ -6,6 +6,28 @@ O formato segue um padrão inspirado em Keep a Changelog.
 
 ---
 
+## [v4.3.0] — Enterprise Scoring & Segment Intelligence Upgrade
+
+### 🚀 Added
+- Score contínuo de porte empresarial (`enterprise_score`) substituindo bloqueio binário
+- Threshold configurável por modo (`--mode conservative | aggressive`)
+- Log estruturado de bloqueios por execução (`enterprise_blocks.csv`)
+- Integração com lista dinâmica `fortune500.json`
+- Camada dupla de bloqueio: nome + domínio enriquecido
+- Auditoria completa por segmento e score
+
+### 🔧 Improved
+- Redução de falsos positivos no filtro de grandes empresas
+- Controle mais fino de risco de travamento por big corp
+- Governança auditável de decisões de bloqueio
+- Execução por segmento mais tolerante (aceita plural e variações simples)
+- Base preparada para futura calibração estatística de thresholds
+
+### 🧠 Architectural Impact
+- Pipeline evolui de heurística simples para modelo de scoring
+- Preparação para futura camada de aprendizado baseado em dados históricos
+- Estrutura pronta para produto SaaS interno com regras configuráveis
+
 ## [v4.2.0] — Email Extraction Hardening & Noise Control
 
 ### 🚀 Added

@@ -16,6 +16,7 @@ import os
 import shutil
 import hashlib
 import atexit
+from typing import Any
 
 # ===============================
 # STATE MANAGER
@@ -611,6 +612,134 @@ def gerar_priorizacao_empresas(empresas_df: pd.DataFrame) -> pd.DataFrame:
 # SEGMENTAÇÃO EMPRESARIAL (BASEADA NO NOME DA EMPRESA)
 # ===============================
 
+# ===============================
+# ENTERPRISE SIZE FILTER (ANTI BIG-CORP)
+# ===============================
+
+ENTERPRISE_KEYWORDS = [
+    "global",
+    "international",
+    "corporation",
+    "corp",
+    "inc",
+    "ltd",
+    "llc",
+    "group",
+    "holdings",
+    "consulting",
+    "technologies",
+    "systems",
+]
+
+SMALL_BIZ_HINTS = [
+    "marketing",
+    "digital",
+    "agência",
+    "agencia",
+    "consultoria",
+    "studio",
+    "clínica",
+    "clinica",
+    "instituto",
+    "associação",
+    "associacao",
+]
+
+FORTUNE_500_FILE = BASE_DIR / "fortune500.json"
+DEFAULT_MODE = "conservative"  # conservative | aggressive
+
+def load_fortune_500_list() -> List[str]:
+    if FORTUNE_500_FILE.exists():
+        try:
+            with open(FORTUNE_500_FILE, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                return [str(x).lower() for x in data]
+        except Exception:
+            return []
+    return []
+
+
+def enterprise_score(company_name: str) -> float:
+    """
+    Score contínuo de porte empresarial.
+    Quanto maior, mais enterprise.
+    """
+    if not company_name:
+        return 0.0
+
+    name = company_name.strip().lower()
+    score = 0.0
+
+    # single-word grande (ex: accenture, microsoft)
+    if len(name.split()) == 1 and len(name) > 6:
+        score += 3.0
+
+    # keywords enterprise
+    if any(k in name for k in ENTERPRISE_KEYWORDS):
+        score += 4.0
+
+    # small biz hints reduzem score
+    if any(h in name for h in SMALL_BIZ_HINTS):
+        score -= 2.0
+
+    # fortune 500 boost
+    fortune_list = load_fortune_500_list()
+    if name in fortune_list:
+        score += 10.0
+
+    return score
+
+# ===============================
+# CAMADA 2: FILTRO POR DOMÍNIO ENTERPRISE
+# ===============================
+def is_large_enterprise_domain(domain: str) -> bool:
+    """
+    Camada 2: bloqueio por domínio retornado no enrichment.
+    Evita crawl em domínios enterprise mesmo que o nome passe na heurística.
+    """
+    if not domain:
+        return False
+
+    d = domain.strip().lower()
+
+    # remove protocolo se vier completo
+    d = re.sub(r"^https?://", "", d)
+    d = d.split("/")[0]
+
+    # remove www
+    if d.startswith("www."):
+        d = d[4:]
+
+    # domínio muito curto normalmente é big corp consolidada
+    root = d.split(".")[0]
+
+    # single-word root grande (ex: accenture.com, deloitte.com)
+    if len(root) > 6 and "-" not in root:
+        return True
+
+    # palavras típicas enterprise no domínio
+    if any(k in d for k in ENTERPRISE_KEYWORDS):
+        return True
+
+    return False
+
+
+# Structured CSV logger for bloqueios
+def log_block_event(run_dir: Path, segment: str, company: str, reason: str, score: float) -> None:
+    audit_file = run_dir / "enterprise_blocks.csv"
+    row = {
+        "timestamp": datetime.now().isoformat(),
+        "segment": segment,
+        "company_name": company,
+        "reason": reason,
+        "enterprise_score": score
+    }
+    df_row = pd.DataFrame([row])
+    if audit_file.exists():
+        df_row.to_csv(audit_file, mode="a", header=False, index=False)
+    else:
+        df_row.to_csv(audit_file, index=False)
+
 EMPRESA_SEGMENT_KEYWORDS = {
     "ONG": ["instituto", "fundação", "fundacao", "associação", "associacao", "ong", "nonprofit"],
     "Educação": ["universidade", "escola", "colégio", "colegio", "educação", "educacao"],
@@ -692,7 +821,8 @@ def executar_pipeline_full_auto_por_segmento(
     state: dict,
     no_enrich: bool = False,
     only_segment: Optional[str] = None,
-    dry_run: bool = False
+    dry_run: bool = False,
+    mode: str = DEFAULT_MODE
 ) -> None:
     """
     Pipeline industrial com:
@@ -721,8 +851,18 @@ def executar_pipeline_full_auto_por_segmento(
         segmento_nome = arquivo.stem
         segmento_safe = re.sub(r"[^A-Za-z0-9_]+", "_", segmento_nome)
 
-        if only_segment and segmento_nome.lower() != only_segment.lower():
-            return
+        if only_segment:
+            seg_norm = segmento_nome.strip().lower()
+            only_norm = only_segment.strip().lower()
+
+            # permite plural simples (ex: "ongs" -> "ong")
+            if only_norm.endswith("s"):
+                only_norm_singular = only_norm[:-1]
+            else:
+                only_norm_singular = only_norm
+
+            if seg_norm not in {only_norm, only_norm_singular}:
+                return
 
         logger.info(f"[SEGMENTO] {segmento_nome}")
 
@@ -741,6 +881,18 @@ def executar_pipeline_full_auto_por_segmento(
         for _, row in df_segment.iterrows():
             company_name = str(row.get("company_name", "")).strip()
             if not company_name:
+                continue
+
+            score = enterprise_score(company_name)
+
+            if mode == "conservative":
+                threshold = 6.0
+            else:  # aggressive
+                threshold = 9.0
+
+            if score >= threshold:
+                logger.info(f"[BLOCK ENTERPRISE] {company_name} | score={score}")
+                log_block_event(run_dir, segmento_nome, company_name, "name_score", score)
                 continue
 
             company_key = company_name.lower()
@@ -780,6 +932,21 @@ def executar_pipeline_full_auto_por_segmento(
             enriched_file = enriched_dir / f"{segmento_safe}_enriched_individual.csv"
             if not enriched_file.exists():
                 continue
+
+            # ===============================
+            # CAMADA 2 - FILTRO POR DOMÍNIO
+            # ===============================
+            try:
+                enriched_df = pd.read_csv(enriched_file)
+                if "domain" in enriched_df.columns:
+                    domain_value = str(enriched_df.iloc[-1].get("domain", "")).strip()
+
+                    if is_large_enterprise_domain(domain_value):
+                        logger.info(f"[BLOCK ENTERPRISE DOMAIN] {company_name} | {domain_value}")
+                        log_block_event(run_dir, segmento_nome, company_name, "domain_rule", score)
+                        continue
+            except Exception as e:
+                logger.warning(f"Falha ao validar domínio enriquecido: {e}")
 
             if not dry_run:
                 subprocess.run([
@@ -837,6 +1004,7 @@ def main() -> None:
     parser.add_argument("--dry-run", action="store_true")
     parser.add_argument("--resume", action="store_true")
     parser.add_argument("--skip-processed", action="store_true")
+    parser.add_argument("--mode", type=str, default=DEFAULT_MODE, choices=["conservative", "aggressive"])
     args = parser.parse_args()
 
     lock_path = acquire_lock()
@@ -915,7 +1083,8 @@ def main() -> None:
         state,
         no_enrich=args.no_enrich,
         only_segment=args.only_segment,
-        dry_run=args.dry_run
+        dry_run=args.dry_run,
+        mode=args.mode
     )
     gerar_relatorio_final(run_dir, state)
 

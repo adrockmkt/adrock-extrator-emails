@@ -188,6 +188,66 @@ Atualmente executa de forma sequencial controlada.
 
 ---
 
+## 9️⃣ Enterprise Scoring & Segment Intelligence
+
+O pipeline agora utiliza modelo de **score contínuo de porte empresarial** ao invés de bloqueio binário.
+
+### 🔢 Enterprise Score
+
+Cada empresa recebe um `enterprise_score` calculado com base em:
+
+- Nome da empresa
+- Palavras-chave corporativas
+- Indícios de small business
+- Lista dinâmica Fortune 500 (`fortune500.json`)
+- Domínio enriquecido (camada 2)
+
+O bloqueio ocorre apenas se o score ultrapassar o threshold do modo escolhido.
+
+---
+
+### 🎛️ Modos Operacionais
+
+O comportamento do filtro pode ser ajustado via CLI:
+
+#### Conservative (default)
+Mais restritivo. Bloqueia empresas com score ≥ 6.0
+
+```bash
+python3 linkedin_processor.py --mode conservative
+```
+
+#### Aggressive
+Mais permissivo. Bloqueia apenas empresas com score ≥ 9.0
+
+```bash
+python3 linkedin_processor.py --mode aggressive
+```
+
+---
+
+### 📄 Log Auditável de Bloqueios
+
+Cada run gera:
+
+```
+linkedin_processed/runs/<run_id>/enterprise_blocks.csv
+```
+
+Colunas:
+- timestamp
+- segment
+- company_name
+- reason (name_score | domain_rule)
+- enterprise_score
+
+Permite:
+- Auditoria de decisões
+- Ajuste fino de threshold
+- Análise estatística futura
+
+---
+
 # ⚙️ Execução
 
 Ativar ambiente virtual:
@@ -237,6 +297,14 @@ python3 linkedin_processor.py --only-segment EDUCACAO
 ```
 
 (Substituir pelo nome exato do segmento gerado em `linkedin_processed/segmentos/`)
+
+---
+
+### 🔧 Executar por Segmento com Modo Específico
+
+```bash
+python3 linkedin_processor.py --only-segment ONG --mode aggressive
+```
 
 ---
 
@@ -323,6 +391,7 @@ O pipeline foi projetado para:
 
 # 🚀 Próximas Evoluções
 
+- Calibração estatística automática de thresholds (baseada em histórico de bloqueios)
 - Checkpoint granular por empresa (nível enterprise)
 - Paralelização controlada por segmento
 - Banco SQLite para controle persistente avançado
