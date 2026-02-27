@@ -6,6 +6,21 @@ O formato segue um padrão inspirado em Keep a Changelog.
 
 ---
 
+## [v4.3.1] — Pipeline Argument Fix & URL Generator Stabilization
+
+### 🛠 Fixed
+- Correção de erro crítico no `gerar_urls.py` que utilizava caminho hardcoded (`csv_enriquecido/...`)
+- Ajuste definitivo para uso exclusivo de argumento CLI (`python gerar_urls.py <caminho_csv_enriquecido>`)
+- Eliminação de dependência de diretório fixo no estágio de geração de URLs
+- Estabilização da integração entre `run_pipeline.py` e `gerar_urls.py`
+
+### 🔧 Improved
+- Maior previsibilidade no fluxo por execução versionada (`runs/`)
+- Redução de falhas intermitentes em ambientes com múltiplos segmentos
+- Pipeline mais consistente para futura execução headless ou server-side
+
+---
+
 ## [v4.3.0] — Enterprise Scoring & Segment Intelligence Upgrade
 
 ### 🚀 Added

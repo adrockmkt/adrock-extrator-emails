@@ -25,14 +25,14 @@ linkedin_raw/                 → Dados exportados do LinkedIn
         ↓
 linkedin_processor.py         → Limpeza, consolidação e segmentação
         ↓
-linkedin_processed/segmentos/ → Segmentos organizados
+data/segmented/               → Segmentos organizados
         ↓
-pipeline_extracao.py          → Engine principal industrial
+run_pipeline.py (orquestrador)
         ↓
-   ├── Enriquecimento (Google Maps)
-   ├── Geração de URLs
-   ├── Extração multi-thread
-   ├── Classificação por score
+   ├── segmentar_empresas.py
+   ├── enriquecer_sites_google_maps.py
+   ├── gerar_urls.py
+   ├── extrator.py
    └── Consolidação final
 ```
 
@@ -264,97 +264,37 @@ pip3 install -r requirements.txt
 
 ---
 
-## 🚀 Execução Completa (Todos os Segmentos)
+## 🚀 Execução Principal (Orquestrador Industrial)
 
 ```bash
-python3 linkedin_processor.py
+python run_pipeline.py
 ```
+
+O sistema perguntará interativamente qual segmento deseja executar.
 
 ---
 
-## 🎯 Execução por Segmento Específico
+# 🏗️ run_pipeline.py — Orquestrador Industrial
 
-Processar apenas um segmento:
+O `run_pipeline.py` é o ponto central de execução do sistema.
 
-### ONG
-```bash
-python3 linkedin_processor.py --only-segment ONG
-```
+Responsabilidades:
 
-### INDUSTRIA
-```bash
-python3 linkedin_processor.py --only-segment INDUSTRIA
-```
+- Perguntar interativamente o segmento
+- Criar diretório versionado em `runs/`
+- Executar cada etapa sequencialmente
+- Interromper execução em caso de falha crítica
+- Garantir consistência entre etapas
 
-### TECNOLOGIA
-```bash
-python3 linkedin_processor.py --only-segment TECNOLOGIA
-```
+Fluxo interno:
 
-### EDUCACAO
-```bash
-python3 linkedin_processor.py --only-segment EDUCACAO
-```
+1. Segmentação
+2. Enriquecimento
+3. Geração de URLs
+4. Extração de emails
+5. Consolidação final
 
-(Substituir pelo nome exato do segmento gerado em `linkedin_processed/segmentos/`)
-
----
-
-### 🔧 Executar por Segmento com Modo Específico
-
-```bash
-python3 linkedin_processor.py --only-segment ONG --mode aggressive
-```
-
----
-
-## 🔁 Retomar Execução Interrompida
-
-```bash
-python3 linkedin_processor.py --resume
-```
-
----
-
-## ⏭️ Pular Segmentos Já Processados
-
-```bash
-python3 linkedin_processor.py --skip-processed
-```
-
----
-
-## 🔐 Execução Segura Recomendada (Produção)
-
-```bash
-python3 linkedin_processor.py --resume --skip-processed
-```
-
----
-
-## 🚫 Ignorar Enriquecimento Google Maps
-
-```bash
-python3 linkedin_processor.py --no-enrich
-```
-
----
-
-## 🧪 Modo Simulação (Sem Extração Real)
-
-```bash
-python3 linkedin_processor.py --dry-run
-```
-
----
-
-## 📏 Definir Limite de Execução (Controle de API)
-
-```bash
-python3 linkedin_processor.py --execution-limit 50
-```
-
-Limita a quantidade de empresas processadas na execução atual.
+Cada execução é isolada por timestamp.
 
 ---
 

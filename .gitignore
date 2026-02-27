@@ -39,11 +39,14 @@ linkedin_raw/
 # All processed LinkedIn data (generated CSV, scoring, lots, prioritization)
 linkedin_processed/
 
-# Segment CSV generated automatically
-csv_por_segmento/
+# All generated data folders (pipeline outputs)
+data/raw/
+data/segmented/
+data/enriched/
+data/lots/
 
-# Enriched CSV generated automatically
-csv_enriquecido/
+# Any CSV generated locally
+data/**/*.csv
 
 # Per-run execution artifacts
 runs/

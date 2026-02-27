@@ -52,7 +52,15 @@ PRIORITY_PATHS = [
 ]
 
 EMAIL_REGEX = re.compile(
-    r"\b[a-zA-Z0-9._%+-]{2,}@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}\b"
+    r"\b[a-zA-Z0-9._%+-]{2,}@[a-zA-Z0-9.-]+\.(com|org|net|br|gov|edu)\b",
+    re.IGNORECASE
+)
+
+BLOCKED_EXTENSIONS = (
+    ".pdf", ".jpg", ".jpeg", ".png",
+    ".gif", ".svg", ".webp",
+    ".zip", ".rar", ".doc", ".docx",
+    ".xls", ".xlsx", ".ppt", ".pptx"
 )
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -146,7 +154,7 @@ def extract_emails_from_text(text, source_url, depth):
         if ".." in email:
             continue
 
-        if not re.search(r"\.[a-z]{2,}$", domain):
+        if not re.search(r"\.(com|org|net|br|gov|edu)$", domain):
             continue
 
         if any(bad in email for bad in ["example", "test@", "no-reply"]):
@@ -210,6 +218,11 @@ def crawl_domain(base_url):
         if current_url in visited:
             continue
 
+        # Bloqueia arquivos binários / documentos
+        lower_url = current_url.lower()
+        if lower_url.endswith(BLOCKED_EXTENSIONS):
+            continue
+
         visited.add(current_url)
 
         try:
@@ -228,6 +241,11 @@ def crawl_domain(base_url):
         if response.status_code != 200:
             consecutive_errors += 1
             consecutive_5xx = 0
+            continue
+
+        # Processa apenas conteúdo HTML
+        content_type = response.headers.get("Content-Type", "")
+        if "text/html" not in content_type:
             continue
 
         # sucesso
