@@ -7,6 +7,10 @@ Este projeto é um **pipeline industrial de prospecção B2B**, estruturado para
 - Extração inteligente de e-mails
 - Classificação e priorização de empresas
 - Controle incremental por hash
+- Cache persistente em SQLite para enriquecimento
+- Governança financeira por execução
+- Log financeiro auditável
+- Controle de custo por segmento
 - Versionamento por execução (runs)
 - Snapshot automático de inputs
 - Lock file contra execução simultânea
@@ -169,10 +173,31 @@ Controle industrial implementado:
 - Contador incremental de chamadas
 - Bloqueio automático ao atingir limite
 
-Evita:
-- Surpresas de custo
-- Estouro de quota
-- Execuções descontroladas
+---
+
+### 💰 Governança Financeira (Google Maps)
+
+O módulo de enriquecimento agora possui controle financeiro industrial:
+
+- Cache persistente em SQLite (`data/enrichment_cache.db`)
+- Flag `--force-refresh` para ignorar cache
+- Limite de chamadas pagas por execução (`--max-api-calls`)
+- Cálculo estimado de custo em USD por execução
+- Breakdown de custo por segmento
+- Log financeiro persistente (`data/finance_log.csv`)
+
+O sistema:
+
+- Nunca realiza chamadas duplicadas
+- Evita reprocessamento desnecessário
+- Permite execução controlada por orçamento
+- Garante previsibilidade de custo operacional
+
+Resumo financeiro exibido ao final de cada execução:
+
+- Total de chamadas pagas
+- Custo estimado total
+- Custo estimado por segmento
 
 ---
 
@@ -334,7 +359,9 @@ O pipeline foi projetado para:
 - Calibração estatística automática de thresholds (baseada em histórico de bloqueios)
 - Checkpoint granular por empresa (nível enterprise)
 - Paralelização controlada por segmento
-- Banco SQLite para controle persistente avançado
+- Limitação direta por orçamento (`--max-budget`)
+- Dashboard financeiro por segmento
+- Monitoramento automático de ROI por campanha de prospecção
 - API interna REST
 - Dashboard comercial
 - Cache inteligente de enriquecimento

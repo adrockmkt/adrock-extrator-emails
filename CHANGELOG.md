@@ -6,6 +6,27 @@ O formato segue um padrão inspirado em Keep a Changelog.
 
 ---
 
+## [v4.4.0] — Financial Governance & Google Maps Cost Control
+
+### 🚀 Added
+- Cache persistente em SQLite para enriquecimento via Google Maps (`data/enrichment_cache.db`)
+- Flag `--force-refresh` para ignorar cache quando necessário
+- Controle de limite de chamadas pagas (`--max-api-calls`)
+- Cálculo estimado de custo por execução (USD)
+- Breakdown financeiro por segmento
+- Log financeiro persistente (`data/finance_log.csv`)
+
+### 🔧 Improved
+- Eliminação definitiva de chamadas duplicadas na API do Google Maps
+- Redução drástica de risco de sobrecusto em execuções longas
+- Execução previsível com governança financeira real
+- Pipeline preparado para operação controlada em ambiente de produção
+
+### 💰 Operational Impact
+- Visibilidade clara de custo por rodada de execução
+- Base para futura limitação por orçamento (`--max-budget`)
+- Estrutura pronta para monetização interna como módulo premium
+
 ## [v4.3.1] — Pipeline Argument Fix & URL Generator Stabilization
 
 ### 🛠 Fixed
